@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FireDoc VLM - Satellite Burn Assessment</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <span class="fire-icon">🔥</span>
+                <h1>FireDoc VLM</h1>
+            </div>
+            <p class="subtitle">Vision-Language Assistant for Satellite-Based Burn Assessment</p>
+        </header>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Map Container -->
+            <div class="map-section">
+                <div id="map"></div>
+                <div class="map-instructions">
+                    <p>📍 Click the rectangle tool to select a region on the map</p>
+                </div>
+            </div>
+
+            <!-- Control Panel -->
+            <div class="control-panel">
+                <!-- Date Range Selector -->
+                <div class="control-section">
+                    <h3>📅 Date Range</h3>
+                    <div class="date-inputs">
+                        <div class="date-group">
+                            <label for="start-date">Start Date:</label>
+                            <input type="date" id="start-date" class="date-input">
+                        </div>
+                        <div class="date-group">
+                            <label for="end-date">End Date:</label>
+                            <input type="date" id="end-date" class="date-input">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Data Layer Toggles -->
+                <div class="control-section">
+                    <h3>🛰️ Data Layers</h3>
+                    <div class="layer-toggles">
+                        <div class="toggle-item">
+                            <input type="checkbox" id="layer-truecolor" checked>
+                            <label for="layer-truecolor">True Color</label>
+                        </div>
+                        <div class="toggle-item">
+                            <input type="checkbox" id="layer-nbr">
+                            <label for="layer-nbr">NBR (Normalized Burn Ratio)</label>
+                        </div>
+                        <div class="toggle-item">
+                            <input type="checkbox" id="layer-dnbr">
+                            <label for="layer-dnbr">dNBR (Differenced NBR)</label>
+                        </div>
+                        <div class="toggle-item">
+                            <input type="checkbox" id="layer-ndvi">
+                            <label for="layer-ndvi">NDVI (Vegetation Index)</label>
+                        </div>
+                        <div class="toggle-item">
+                            <input type="checkbox" id="layer-swir">
+                            <label for="layer-swir">SWIR Composite</label>
+                        </div>
+                        <div class="toggle-item">
+                            <input type="checkbox" id="layer-firms">
+                            <label for="layer-firms">NASA FIRMS (Fire Hotspots)</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Selected Region Info -->
+                <div class="control-section">
+                    <h3>📍 Selected Region</h3>
+                    <div id="region-info" class="region-info">
+                        <p class="no-selection">No region selected yet</p>
+                    </div>
+                </div>
+
+                <!-- Fetch Data Button -->
+                <div class="control-section">
+                    <button id="fetch-data-btn" class="btn-primary" disabled>
+                        🚀 Fetch Satellite Data
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analysis Section -->
+        <div class="analysis-section">
+            <h3>💬 AI Analysis</h3>
+            
+            <!-- Prompt Input -->
+            <div class="prompt-section">
+                <textarea 
+                    id="prompt-input" 
+                    class="prompt-input" 
+                    placeholder="Ask FireDoc VLM about the burn assessment... 
+Examples:
+- Analyze the burn severity in the selected region
+- What's the vegetation recovery rate?
+- Estimate the total burned area
+- Compare before and after fire conditions"></textarea>
+                <button id="submit-prompt-btn" class="btn-submit" disabled>
+                    ✨ Analyze with VLM
+                </button>
+            </div>
+
+            <!-- Response Area -->
+            <div id="response-area" class="response-area">
+                <div class="placeholder-message">
+                    <p>👋 Welcome to FireDoc VLM!</p>
+                    <p>Select a region on the map, choose your data layers, and ask questions about burn assessment.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+    
+    <!-- Custom JS -->
+    <script src="app.js"></script>
+</body>
+</html>
