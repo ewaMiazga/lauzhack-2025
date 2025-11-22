@@ -17,6 +17,8 @@ from together import Together
 from dotenv import load_dotenv
 import os
 import base64
+import requests
+import hashlib
 
 # Load environment variables
 load_dotenv()
@@ -106,6 +108,140 @@ def analyze_image_with_vlm(image_path, prompt, conversation_history=None):
     return response_text
 
 
+def get_copernicus_token():
+    """Obtain an access token from Copernicus Data Space. Returns token string or raises Exception."""
+    if not COPERNICUS_USERNAME or not COPERNICUS_PASSWORD:
+        raise RuntimeError("COPERNICUS_USERNAME or COPERNICUS_PASSWORD missing in environment (.env)")
+    token_url = "https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token"
+    resp = requests.post(token_url, data={
+        "grant_type": "password",
+        "username": COPERNICUS_USERNAME,
+        "password": COPERNICUS_PASSWORD,
+        "client_id": "cdse-public"
+    }, timeout=30)
+    if resp.status_code != 200:
+        raise RuntimeError(f"Token request failed ({resp.status_code}): {resp.text[:250]}")
+    return resp.json().get("access_token")
+
+
+def download_satellite_image(region: dict, date_range: dict, max_cloud: int = 35):
+    """Download a Sentinel-2 true color JPEG for the selected region & date range.
+    Returns dict with metadata: { filename, path, size_kb, url, bounds, source }.
+    On failure raises Exception.
+    """
+    # Validate inputs
+    required_region_keys = {"north", "south", "east", "west"}
+    if not region or not required_region_keys.issubset(region.keys()):
+        raise ValueError("Invalid region object supplied to download_satellite_image")
+
+    if not date_range or "start" not in date_range or "end" not in date_range:
+        raise ValueError("Invalid date_range object supplied to download_satellite_image")
+
+    # Acquire token
+    print("🔑 Obtaining Copernicus token...")
+    token = get_copernicus_token()
+    print("✅ Token acquired")
+
+    # Build evalscript (true color) - simple reflectance scaling
+    evalscript = """
+//VERSION=3
+function setup() {
+  return {
+    input: ["B04", "B03", "B02"],
+    output: { bands: 3 }
+  };
+}
+function evaluatePixel(sample) {
+  return [2.5 * sample.B04, 2.5 * sample.B03, 2.5 * sample.B02];
+}
+"""
+    # Determine bbox (minLon, minLat, maxLon, maxLat)
+    minLon = region['west']
+    minLat = region['south']
+    maxLon = region['east']
+    maxLat = region['north']
+
+    # Dynamic sizing: keep width constant, scale height by lat span ratio
+    width = 1024
+    # Rough aspect ratio correction (longitude scaling by cos(lat))
+    lat_span = maxLat - minLat
+    lon_span = maxLon - minLon
+    avg_lat_rad = ((maxLat + minLat) / 2) * 3.14159 / 180
+    # Convert degree span to pseudo-metric ratio
+    lon_metric = lon_span * abs(
+        (1 * (1 if abs(avg_lat_rad) < 1e-6 else (1 / (1))))
+    ) * (abs(avg_lat_rad) * 0 + 1)  # keep simple, avoid over-complication
+    # Fallback height estimation (basic proportional)
+    height = int(max(256, min(2048, (lat_span / max(lon_span, 1e-6)) * width)))
+
+    process_url = "https://sh.dataspace.copernicus.eu/api/v1/process"
+    payload = {
+        "input": {
+            "bounds": {"bbox": [minLon, minLat, maxLon, maxLat]},
+            "data": [{
+                "type": "sentinel-2-l2a",
+                "dataFilter": {
+                    "timeRange": {
+                        "from": f"{date_range['start']}T00:00:00Z",
+                        "to": f"{date_range['end']}T23:59:59Z"
+                    },
+                    "maxCloudCoverage": max_cloud
+                }
+            }]
+        },
+        "output": {
+            "width": width,
+            "height": height,
+            "responses": [{
+                "identifier": "default",
+                "format": {"type": "image/jpeg"}
+            }]
+        },
+        "evalscript": evalscript
+    }
+
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+        "Accept": "image/jpeg"
+    }
+
+    print(f"📤 Requesting Sentinel-2 image: bbox=({minLon},{minLat},{maxLon},{maxLat}) time={date_range['start']}→{date_range['end']} clouds<={max_cloud}% size={width}x{height}")
+    resp = requests.post(process_url, json=payload, headers=headers, timeout=120)
+
+    if resp.status_code != 200:
+        raise RuntimeError(f"Processing API failed ({resp.status_code}): {resp.text[:300]}")
+
+    content = resp.content
+    # Hash for uniqueness
+    hash_part = hashlib.sha256(content[:2000]).hexdigest()[:10]
+    filename = f"sentinel2_{date_range['start'].replace('-','')}_{date_range['end'].replace('-','')}_{hash_part}.jpg"
+    save_path = os.path.join(SATELLITE_DATA_DIR, filename)
+    with open(save_path, 'wb') as f:
+        f.write(content)
+
+    size_kb = round(len(content) / 1024, 2)
+    print(f"✅ Downloaded satellite image saved as {filename} ({size_kb} KB)")
+
+    return {
+        "filename": filename,
+        "path": save_path,
+        "size_kb": size_kb,
+        "url": f"/satellite_data/{filename}",
+        "bounds": {
+            "north": region['north'],
+            "south": region['south'],
+            "east": region['east'],
+            "west": region['west']
+        },
+        "source": "downloaded"
+    }
+
+
+COPERNICUS_USERNAME = os.getenv("COPERNICUS_USERNAME")
+COPERNICUS_PASSWORD = os.getenv("COPERNICUS_PASSWORD")
+
+
 @app.route('/')
 def serve_index():
     """Serve the main HTML page."""
@@ -184,41 +320,59 @@ def fetch_satellite_data():
         all_files = os.listdir(SATELLITE_DATA_DIR)
         print(f"   Total files in directory: {len(all_files)}")
 
+        # Attempt live download for the selected region + date range
+        downloaded_meta = None
+        download_error = None
+        print("\n🛰️ Attempting live Sentinel-2 download for selected region...")
+        try:
+            downloaded_meta = download_satellite_image(region, date_range)
+        except Exception as dl_err:
+            download_error = str(dl_err)
+            print(f"⚠️ Live download failed: {download_error}")
+
+        # Existing local images (cache)
         images_meta = []
         for filename in all_files:
             if filename.lower().endswith(('.jpg', '.jpeg', '.png')):
                 file_path = os.path.join(SATELLITE_DATA_DIR, filename)
                 size_kb = os.path.getsize(file_path) / 1024
                 url = f"/satellite_data/{filename}"
-                print(f"   ✅ Found image: {filename} ({size_kb:.2f} KB)")
                 images_meta.append({
                     "filename": filename,
                     "url": url,
                     "size_kb": round(size_kb, 2),
-                    # We assume images correspond to the selected region for now
                     "bounds": {
                         "north": region['north'],
                         "south": region['south'],
                         "east": region['east'],
                         "west": region['west']
-                    }
+                    },
+                    "source": "cached"
                 })
+
+        if downloaded_meta:
+            # Prepend newest image to results
+            images_meta.insert(0, downloaded_meta)
+        else:
+            print("ℹ️ Using cached images only (no live download).")
 
         if not images_meta:
             print(f"\n❌ [ERROR] No satellite images found!")
             print("="*80 + "\n")
             return jsonify({
                 "success": False,
-                "message": "No satellite images available. Please add images to the satellite_data directory.",
+                "message": "No satellite images available (download failed and cache empty).",
+                "download_error": download_error,
                 "images": []
             }), 404
 
-        print(f"\n✅ [SUCCESS] Found {len(images_meta)} satellite image(s)")
+        print(f"\n✅ [SUCCESS] Returning {len(images_meta)} image(s) (downloaded first if available)")
         print("="*80 + "\n")
 
         return jsonify({
             "success": True,
             "message": f"Found {len(images_meta)} satellite image(s)",
+            "download_error": download_error,
             "images": images_meta
         })
 

@@ -275,26 +275,19 @@ function renderImageryGallery(images) {
 }
 
 function overlayImageOnMap(img) {
-    // Remove existing overlay if present
     if (appState.currentOverlay) {
         map.removeLayer(appState.currentOverlay);
         appState.currentOverlay = null;
     }
-
-    // Create bounds from provided region bounds
     const bounds = L.latLngBounds(
         [img.bounds.south, img.bounds.west],
         [img.bounds.north, img.bounds.east]
     );
-
-    // Create image overlay
-    const opacity = parseFloat(document.getElementById('overlay-opacity').value || '0.6');
+    const opacityControl = document.getElementById('overlay-opacity');
+    const opacity = parseFloat(opacityControl ? opacityControl.value : '0.85');
     const overlay = L.imageOverlay(img.url, bounds, { opacity });
     overlay.addTo(map);
-
-    // Fit map to overlay bounds
     map.fitBounds(bounds, { padding: [20, 20] });
-
     appState.currentOverlay = overlay;
 }
 
