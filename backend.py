@@ -94,7 +94,7 @@ def analyze_image_with_vlm(image_path, prompt, conversation_history=None):
 
     # Call Together AI Vision API
     stream = together_client.chat.completions.create(
-        model="meta-llama/Llama-Vision-Free",
+        model="meta-llama/Llama-4-Scout-17B-16E-Instruct",
         messages=messages,
         stream=True,
     )
