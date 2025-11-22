@@ -124,25 +124,104 @@ def get_copernicus_token():
     return resp.json().get("access_token")
 
 
-def download_satellite_image(region: dict, date_range: dict, max_cloud: int = 35):
-    """Download a Sentinel-2 true color JPEG for the selected region & date range.
-    Returns dict with metadata: { filename, path, size_kb, url, bounds, source }.
-    On failure raises Exception.
+def query_sentinel_products_with_pagination(region: dict, date_range: dict, token: str, max_cloud: int = 35):
     """
-    # Validate inputs
-    required_region_keys = {"north", "south", "east", "west"}
-    if not region or not required_region_keys.issubset(region.keys()):
-        raise ValueError("Invalid region object supplied to download_satellite_image")
+    Query Copernicus OData API for all Sentinel-2 products matching criteria.
+    Handles pagination automatically to retrieve all results.
+    
+    Returns list of product metadata dictionaries.
+    """
+    from urllib.parse import quote
+    
+    minLon = region['west']
+    minLat = region['south']
+    maxLon = region['east']
+    maxLat = region['north']
+    
+    # Build WKT polygon for area of interest
+    wkt_polygon = (
+        f"POLYGON(("
+        f"{minLon} {minLat},"
+        f"{maxLon} {minLat},"
+        f"{maxLon} {maxLat},"
+        f"{minLon} {maxLat},"
+        f"{minLon} {minLat}"
+        f"))"
+    )
+    
+    # Build OData filter
+    filters = [
+        "Collection/Name eq 'SENTINEL-2'",
+        "Attributes/OData.CSC.StringAttribute/any(att:att/Name eq 'productType' and att/OData.CSC.StringAttribute/Value eq 'S2MSI2A')",
+        f"OData.CSC.Intersects(area=geography'SRID=4326;{wkt_polygon}')",
+        f"ContentDate/Start gt {date_range['start']}T00:00:00.000Z",
+        f"ContentDate/Start lt {date_range['end']}T23:59:59.999Z",
+        f"Attributes/OData.CSC.DoubleAttribute/any(att:att/Name eq 'cloudCover' and att/OData.CSC.DoubleAttribute/Value le {max_cloud})"
+    ]
+    
+    filter_string = " and ".join(filters)
+    base_url = "https://catalogue.dataspace.copernicus.eu/odata/v1/Products"
+    query_url = f"{base_url}?$filter={quote(filter_string)}&$orderby=ContentDate/Start desc&$top=1000"
+    
+    all_products = []
+    current_url = query_url
+    page_num = 1
+    
+    headers = {"Authorization": f"Bearer {token}"}
+    
+    print(f"📡 Querying Copernicus OData API for products...")
+    
+    while current_url:
+        print(f"   📄 Fetching page {page_num}...")
+        
+        try:
+            resp = requests.get(current_url, headers=headers, timeout=60)
+            
+            if resp.status_code != 200:
+                print(f"   ❌ Query failed ({resp.status_code}): {resp.text[:300]}")
+                break
+            
+            data = resp.json()
+            products = data.get('value', [])
+            all_products.extend(products)
+            
+            print(f"   ✅ Retrieved {len(products)} products from page {page_num}")
+            print(f"   📊 Total products so far: {len(all_products)}")
+            
+            # Check for next page
+            next_link = data.get('@odata.nextLink')
+            if next_link:
+                print(f"   🔗 More pages available, continuing...")
+                current_url = next_link
+                page_num += 1
+            else:
+                print(f"   ✅ All pages retrieved!")
+                current_url = None
+                
+        except Exception as e:
+            print(f"   ❌ Error on page {page_num}: {str(e)}")
+            break
+    
+    print(f"📦 Total products found: {len(all_products)}")
+    return all_products
 
-    if not date_range or "start" not in date_range or "end" not in date_range:
-        raise ValueError("Invalid date_range object supplied to download_satellite_image")
 
-    # Acquire token
-    print("🔑 Obtaining Copernicus token...")
-    token = get_copernicus_token()
-    print("✅ Token acquired")
-
-    # Build evalscript (true color) - simple reflectance scaling
+def download_satellite_image_for_product(product: dict, region: dict, token: str, max_cloud: int = 35):
+    """
+    Download a Sentinel-2 true color JPEG for a specific product.
+    Returns dict with metadata or raises Exception on failure.
+    """
+    # Extract product information
+    product_name = product.get('Name', 'unknown')
+    sensing_start = product.get('ContentDate', {}).get('Start', '')
+    
+    if not sensing_start:
+        raise ValueError(f"No sensing date for product {product_name}")
+    
+    # Parse sensing date
+    sensing_date = sensing_start.split('T')[0]
+    
+    # Build evalscript (true color)
     evalscript = """
 //VERSION=3
 function setup() {
@@ -155,25 +234,18 @@ function evaluatePixel(sample) {
   return [2.5 * sample.B04, 2.5 * sample.B03, 2.5 * sample.B02];
 }
 """
-    # Determine bbox (minLon, minLat, maxLon, maxLat)
+    
     minLon = region['west']
     minLat = region['south']
     maxLon = region['east']
     maxLat = region['north']
-
-    # Dynamic sizing: keep width constant, scale height by lat span ratio
+    
+    # Dynamic sizing
     width = 1024
-    # Rough aspect ratio correction (longitude scaling by cos(lat))
     lat_span = maxLat - minLat
     lon_span = maxLon - minLon
-    avg_lat_rad = ((maxLat + minLat) / 2) * 3.14159 / 180
-    # Convert degree span to pseudo-metric ratio
-    lon_metric = lon_span * abs(
-        (1 * (1 if abs(avg_lat_rad) < 1e-6 else (1 / (1))))
-    ) * (abs(avg_lat_rad) * 0 + 1)  # keep simple, avoid over-complication
-    # Fallback height estimation (basic proportional)
     height = int(max(256, min(2048, (lat_span / max(lon_span, 1e-6)) * width)))
-
+    
     process_url = "https://sh.dataspace.copernicus.eu/api/v1/process"
     payload = {
         "input": {
@@ -182,8 +254,8 @@ function evaluatePixel(sample) {
                 "type": "sentinel-2-l2a",
                 "dataFilter": {
                     "timeRange": {
-                        "from": f"{date_range['start']}T00:00:00Z",
-                        "to": f"{date_range['end']}T23:59:59Z"
+                        "from": f"{sensing_date}T00:00:00Z",
+                        "to": f"{sensing_date}T23:59:59Z"
                     },
                     "maxCloudCoverage": max_cloud
                 }
@@ -199,35 +271,35 @@ function evaluatePixel(sample) {
         },
         "evalscript": evalscript
     }
-
+    
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
         "Accept": "image/jpeg"
     }
-
-    print(f"📤 Requesting Sentinel-2 image: bbox=({minLon},{minLat},{maxLon},{maxLat}) time={date_range['start']}→{date_range['end']} clouds<={max_cloud}% size={width}x{height}")
+    
     resp = requests.post(process_url, json=payload, headers=headers, timeout=120)
-
+    
     if resp.status_code != 200:
         raise RuntimeError(f"Processing API failed ({resp.status_code}): {resp.text[:300]}")
-
+    
     content = resp.content
-    # Hash for uniqueness
-    hash_part = hashlib.sha256(content[:2000]).hexdigest()[:10]
-    filename = f"sentinel2_{date_range['start'].replace('-','')}_{date_range['end'].replace('-','')}_{hash_part}.jpg"
+    hash_part = hashlib.sha256(content[:2000]).hexdigest()[:8]
+    filename = f"sentinel2_{sensing_date.replace('-', '')}_{hash_part}.jpg"
     save_path = os.path.join(SATELLITE_DATA_DIR, filename)
+    
     with open(save_path, 'wb') as f:
         f.write(content)
-
+    
     size_kb = round(len(content) / 1024, 2)
-    print(f"✅ Downloaded satellite image saved as {filename} ({size_kb} KB)")
-
+    
     return {
         "filename": filename,
         "path": save_path,
         "size_kb": size_kb,
         "url": f"/satellite_data/{filename}",
+        "sensing_date": sensing_date,
+        "product_name": product_name,
         "bounds": {
             "north": region['north'],
             "south": region['south'],
@@ -236,6 +308,46 @@ function evaluatePixel(sample) {
         },
         "source": "downloaded"
     }
+
+
+def download_all_satellite_images(region: dict, date_range: dict, max_cloud: int = 35, max_images: int = 10):
+    """
+    Download ALL Sentinel-2 images for the date range using OData API with pagination.
+    Returns list of image metadata dictionaries.
+    """
+    print("🔑 Obtaining Copernicus token...")
+    token = get_copernicus_token()
+    print("✅ Token acquired")
+    
+    # Query all products with pagination
+    products = query_sentinel_products_with_pagination(region, date_range, token, max_cloud)
+    
+    if not products:
+        print("⚠️ No products found matching criteria")
+        return []
+    
+    # Limit downloads to avoid overwhelming the system
+    products_to_download = products[:max_images]
+    print(f"\n📥 Downloading {len(products_to_download)} image(s) (limited from {len(products)} total)...")
+    
+    downloaded_images = []
+    failed_count = 0
+    
+    for idx, product in enumerate(products_to_download, 1):
+        try:
+            print(f"\n🖼️  Image {idx}/{len(products_to_download)}: {product.get('Name', 'unknown')}")
+            
+            img_meta = download_satellite_image_for_product(product, region, token, max_cloud)
+            downloaded_images.append(img_meta)
+            
+            print(f"   ✅ Downloaded: {img_meta['filename']} ({img_meta['size_kb']} KB)")
+            
+        except Exception as e:
+            failed_count += 1
+            print(f"   ❌ Failed: {str(e)}")
+    
+    print(f"\n📊 Download Summary: {len(downloaded_images)} succeeded, {failed_count} failed")
+    return downloaded_images
 
 
 COPERNICUS_USERNAME = os.getenv("COPERNICUS_USERNAME")
@@ -320,24 +432,25 @@ def fetch_satellite_data():
         all_files = os.listdir(SATELLITE_DATA_DIR)
         print(f"   Total files in directory: {len(all_files)}")
 
-        # Attempt live download for the selected region + date range
-        downloaded_meta = None
+        # Attempt to download ALL images from the date range with pagination
+        downloaded_images = []
         download_error = None
-        print("\n🛰️ Attempting live Sentinel-2 download for selected region...")
+        print("\n🛰️ Downloading ALL Sentinel-2 images for date range (with pagination)...")
+        print(f"   📅 Date Range: {date_range['start']} to {date_range['end']}")
         try:
-            downloaded_meta = download_satellite_image(region, date_range)
+            downloaded_images = download_all_satellite_images(region, date_range, max_cloud=35, max_images=10)
         except Exception as dl_err:
             download_error = str(dl_err)
-            print(f"⚠️ Live download failed: {download_error}")
+            print(f"⚠️ Download failed: {download_error}")
 
         # Existing local images (cache)
-        images_meta = []
+        cached_images = []
         for filename in all_files:
             if filename.lower().endswith(('.jpg', '.jpeg', '.png')):
                 file_path = os.path.join(SATELLITE_DATA_DIR, filename)
                 size_kb = os.path.getsize(file_path) / 1024
                 url = f"/satellite_data/{filename}"
-                images_meta.append({
+                cached_images.append({
                     "filename": filename,
                     "url": url,
                     "size_kb": round(size_kb, 2),
@@ -350,11 +463,13 @@ def fetch_satellite_data():
                     "source": "cached"
                 })
 
-        if downloaded_meta:
-            # Prepend newest image to results
-            images_meta.insert(0, downloaded_meta)
-        else:
-            print("ℹ️ Using cached images only (no live download).")
+        # Combine downloaded and cached images
+        images_meta = downloaded_images + cached_images
+        
+        print(f"\n📊 IMAGE COUNT SUMMARY:")
+        print(f"   Downloaded images: {len(downloaded_images)}")
+        print(f"   Cached images: {len(cached_images)}")
+        print(f"   📸 TOTAL IMAGES RETURNED: {len(images_meta)}")
 
         if not images_meta:
             print(f"\n❌ [ERROR] No satellite images found!")
@@ -366,7 +481,10 @@ def fetch_satellite_data():
                 "images": []
             }), 404
 
-        print(f"\n✅ [SUCCESS] Returning {len(images_meta)} image(s) (downloaded first if available)")
+        print(f"\n✅ [SUCCESS] Returning {len(images_meta)} image(s)")
+        for idx, img in enumerate(images_meta, 1):
+            sensing = img.get('sensing_date', 'unknown')
+            print(f"   Image {idx}: {img['filename']} ({img['size_kb']} KB) - Date: {sensing} - Source: {img['source']}")
         print("="*80 + "\n")
 
         return jsonify({
