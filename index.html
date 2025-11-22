@@ -126,6 +126,21 @@ Examples:
                 </div>
             </div>
         </div>
+
+        <!-- Imagery Preview Section -->
+        <div class="analysis-section" id="imagery-section">
+            <h3>🛰️ Satellite Imagery</h3>
+            <div class="imagery-controls">
+                <label for="overlay-opacity">Overlay opacity</label>
+                <input type="range" id="overlay-opacity" min="0" max="1" step="0.05" value="0.6" />
+                <button id="clear-overlay-btn" class="btn-primary" style="margin-left: 12px; width: auto;">Clear Overlay</button>
+            </div>
+            <div id="imagery-gallery" class="imagery-gallery">
+                <div class="placeholder-message">
+                    <p>🖼️ Fetched images will appear here after you click "Fetch Satellite Data".</p>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Leaflet JS -->

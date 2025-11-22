@@ -4,7 +4,9 @@ const appState = {
     selectedLayers: ['layer-truecolor'],
     startDate: null,
     endDate: null,
-    conversationHistory: []
+    conversationHistory: [],
+    fetchedImages: [],
+    currentOverlay: null
 };
 
 // Initialize Map
@@ -200,18 +202,128 @@ function initLayerToggles() {
 function updateFetchButton() {
     const fetchBtn = document.getElementById('fetch-data-btn');
     const submitBtn = document.getElementById('submit-prompt-btn');
-    
+
     const hasRegion = appState.selectedRegion !== null;
     const hasDateRange = appState.startDate && appState.endDate;
     const hasLayers = appState.selectedLayers.length > 0;
-    
+
     fetchBtn.disabled = !(hasRegion && hasDateRange && hasLayers);
+}
+
+// Render imagery gallery
+function renderImageryGallery(images) {
+    const gallery = document.getElementById('imagery-gallery');
+    gallery.innerHTML = '';
+
+    if (!images || images.length === 0) {
+        const placeholder = document.createElement('div');
+        placeholder.className = 'placeholder-message';
+        placeholder.innerHTML = '<p>🖼️ No images found.</p>';
+        gallery.appendChild(placeholder);
+        return;
+    }
+
+    images.forEach((img, idx) => {
+        const card = document.createElement('div');
+        card.className = 'imagery-card';
+
+        const thumbnail = document.createElement('img');
+        // Thumbnails can use the same URL; browsers will size them down
+        thumbnail.src = img.url;
+        thumbnail.alt = img.filename;
+
+        const meta = document.createElement('div');
+        meta.className = 'meta';
+
+        const info = document.createElement('div');
+        info.className = 'info';
+        info.innerHTML = `
+            <strong>${img.filename}</strong>
+            <span>${img.size_kb} KB</span>
+        `;
+
+        const actions = document.createElement('div');
+        actions.className = 'actions';
+
+        const viewBtn = document.createElement('button');
+        viewBtn.className = 'btn-small';
+        viewBtn.textContent = 'Overlay on Map';
+        viewBtn.addEventListener('click', () => overlayImageOnMap(img));
+
+        const openBtn = document.createElement('a');
+        openBtn.className = 'btn-small';
+        openBtn.textContent = 'Open';
+        openBtn.href = img.url;
+        openBtn.target = '_blank';
+        openBtn.rel = 'noopener noreferrer';
+
+        actions.appendChild(viewBtn);
+        actions.appendChild(openBtn);
+
+        meta.appendChild(info);
+        meta.appendChild(actions);
+
+        card.appendChild(thumbnail);
+        card.appendChild(meta);
+        gallery.appendChild(card);
+
+        // Auto-overlay the first image for quick feedback
+        if (idx === 0) {
+            overlayImageOnMap(img);
+        }
+    });
+}
+
+function overlayImageOnMap(img) {
+    // Remove existing overlay if present
+    if (appState.currentOverlay) {
+        map.removeLayer(appState.currentOverlay);
+        appState.currentOverlay = null;
+    }
+
+    // Create bounds from provided region bounds
+    const bounds = L.latLngBounds(
+        [img.bounds.south, img.bounds.west],
+        [img.bounds.north, img.bounds.east]
+    );
+
+    // Create image overlay
+    const opacity = parseFloat(document.getElementById('overlay-opacity').value || '0.6');
+    const overlay = L.imageOverlay(img.url, bounds, { opacity });
+    overlay.addTo(map);
+
+    // Fit map to overlay bounds
+    map.fitBounds(bounds, { padding: [20, 20] });
+
+    appState.currentOverlay = overlay;
+}
+
+function initOverlayControls() {
+    const opacityInput = document.getElementById('overlay-opacity');
+    const clearBtn = document.getElementById('clear-overlay-btn');
+
+    if (opacityInput) {
+        opacityInput.addEventListener('input', () => {
+            if (appState.currentOverlay) {
+                appState.currentOverlay.setOpacity(parseFloat(opacityInput.value));
+            }
+        });
+    }
+
+    if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+            if (appState.currentOverlay) {
+                map.removeLayer(appState.currentOverlay);
+                appState.currentOverlay = null;
+            }
+        });
+    }
 }
 
 // Fetch Data Handler
 function initFetchButton() {
     const fetchBtn = document.getElementById('fetch-data-btn');
-    
+
     fetchBtn.addEventListener('click', async () => {
         // Prepare data payload
         const payload = {
@@ -222,13 +334,12 @@ function initFetchButton() {
             },
             layers: appState.selectedLayers.map(id => id.replace('layer-', ''))
         };
-        
+
         // Show loading state
         fetchBtn.disabled = true;
         fetchBtn.innerHTML = '⏳ Fetching Data...';
-        
+
         try {
-            // TODO: Replace with actual API endpoint
             const response = await fetch('/api/fetch-data', {
                 method: 'POST',
                 headers: {
@@ -236,28 +347,33 @@ function initFetchButton() {
                 },
                 body: JSON.stringify(payload)
             });
-            
+
             if (response.ok) {
                 const data = await response.json();
-                
+
+                // Save and render imagery
+                appState.fetchedImages = data.images || [];
+                renderImageryGallery(appState.fetchedImages);
+
                 // Enable prompt submission
                 document.getElementById('submit-prompt-btn').disabled = false;
-                
+
                 // Show success message
                 addSystemMessage('✅ Satellite data fetched successfully! You can now ask questions about the burn assessment.');
-                
+
                 fetchBtn.innerHTML = '✅ Data Fetched';
                 setTimeout(() => {
                     fetchBtn.innerHTML = '🚀 Fetch Satellite Data';
                     fetchBtn.disabled = false;
                 }, 2000);
             } else {
-                throw new Error('Failed to fetch data');
+                const err = await response.json().catch(() => ({}));
+                throw new Error(err.message || 'Failed to fetch data');
             }
         } catch (error) {
             console.error('Error fetching data:', error);
             addSystemMessage('❌ Error fetching satellite data. Please try again.');
-            
+
             fetchBtn.innerHTML = '❌ Failed - Try Again';
             setTimeout(() => {
                 fetchBtn.innerHTML = '🚀 Fetch Satellite Data';
@@ -459,6 +575,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initLayerToggles();
     initFetchButton();
     initPromptHandler();
-    
+    initOverlayControls();
+
     console.log('🔥 FireDoc VLM initialized successfully!');
 });
