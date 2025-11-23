@@ -30,7 +30,7 @@ query_constructor.add_collection_filter('sentinel-2')
 query_constructor.add_product_type_filter('l2a')
 query_constructor.add_aoi_filter(aoi)
 query_constructor.add_sensing_start_date_filter(datetime(2023, 10, 1), datetime(2023, 10, 31))
-query_constructor.add_cloud_cover_filter(25)  # Max 25% cloud cover
+query_constructor.add_cloud_cover_filter(5)  # Max 5% cloud cover (minimal clouds)
 
 # Check how many products match
 print("Checking query...")
@@ -128,7 +128,7 @@ if len(products) > 0:
                         "from": f"{sensing_date}T00:00:00Z",
                         "to": f"{sensing_date}T23:59:59Z"
                     },
-                    "maxCloudCoverage": 25
+                    "maxCloudCoverage": 5
                 }
             }]
         },

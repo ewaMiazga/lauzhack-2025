@@ -56,21 +56,22 @@ def encode_image_to_base64(image_path):
         return base64.b64encode(image_file.read()).decode("utf-8")
 
 
-def analyze_image_with_vlm(image_path, prompt, conversation_history=None):
+def analyze_image_with_vlm(image_paths, prompt, conversation_history=None):
     """
-    Analyze an image using Together AI Vision-Language Model.
+    Analyze one or more images using Together AI Vision-Language Model.
 
     Args:
-        image_path: Path to the image to analyze
-        prompt: User's question about the image
+        image_paths: Single path (string) or list of paths to images (for before/after)
+        prompt: User's question about the image(s)
         conversation_history: Previous conversation messages (optional)
 
     Returns:
         AI's response as a string
     """
-    # Encode the image
-    base64_image = encode_image_to_base64(image_path)
-
+    # Handle both single image and list of images
+    if isinstance(image_paths, str):
+        image_paths = [image_paths]
+    
     # Build the messages list
     messages = []
 
@@ -78,18 +79,23 @@ def analyze_image_with_vlm(image_path, prompt, conversation_history=None):
     if conversation_history:
         messages.extend(conversation_history)
 
-    # Add the current user message with the image
+    # Build content array with text and images
+    content = [{"type": "text", "text": prompt}]
+    
+    # Add all images to the content
+    for image_path in image_paths:
+        base64_image = encode_image_to_base64(image_path)
+        content.append({
+            "type": "image_url",
+            "image_url": {
+                "url": f"data:image/jpeg;base64,{base64_image}"
+            },
+        })
+    
+    # Add the current user message with all images
     messages.append({
         "role": "user",
-        "content": [
-            {"type": "text", "text": prompt},
-            {
-                "type": "image_url",
-                "image_url": {
-                    "url": f"data:image/jpeg;base64,{base64_image}"
-                },
-            },
-        ],
+        "content": content,
     })
 
     # Call Together AI Vision API
@@ -557,7 +563,7 @@ def fetch_satellite_data():
         print(f"   📅 Date Range: {date_range['start']} to {date_range['end']}")
         print(f"   🎨 Layers: {', '.join(layers) if layers else 'truecolor (default)'}")
         try:
-            downloaded_images = download_all_satellite_images(region, date_range, layers=layers, max_cloud=35, max_images=10)
+            downloaded_images = download_all_satellite_images(region, date_range, layers=layers, max_cloud=15, max_images=10)
         except Exception as dl_err:
             download_error = str(dl_err)
             print(f"⚠️ Download failed: {download_error}")
@@ -714,38 +720,135 @@ def analyze_with_vlm():
                 "response": "❌ No satellite images available for analysis. Please fetch data first."
             }), 404
 
-        # Step 4: Select image
-        print(f"\n🔍 [DEBUG] Step 4: Selecting image to analyze...")
-        image_filename = available_images[-1]
-        image_path = os.path.join(SATELLITE_DATA_DIR, image_filename)
-        print(f"   ✅ Selected image: {image_filename}")
-        print(f"   Full path: {image_path}")
+        # Step 4: Select images (before and after for same filter type)
+        print(f"\n🔍 [DEBUG] Step 4: Selecting images to analyze (before/after)...")
+        
+        # Group images by filter type (extract from filename pattern: sentinel2_DATE_FILTER_HASH)
+        images_by_filter = {}
+        for img in available_images:
+            parts = img.split('_')
+            if len(parts) >= 3:
+                filter_type = parts[2]  # e.g., 'ndvi', 'dnbr', 'truecolor', etc.
+                if filter_type not in images_by_filter:
+                    images_by_filter[filter_type] = []
+                images_by_filter[filter_type].append(img)
+        
+        print(f"   Images grouped by filter type: {dict((k, len(v)) for k, v in images_by_filter.items())}")
+        
+        # Use selected layers from frontend to determine which filter to use
+        selected_filter = None
+        selected_images = []
+        
+        # Priority 1: Use the first selected layer from frontend that has images
+        if layers:
+            print(f"   Checking selected layers from frontend: {layers}")
+            for layer in layers:
+                if layer in images_by_filter and len(images_by_filter[layer]) >= 2:
+                    selected_filter = layer
+                    selected_images = sorted(images_by_filter[layer])  # Sort by date (in filename)
+                    print(f"   ✅ Using selected layer '{layer}' with {len(selected_images)} images")
+                    break
+            
+            # Fallback: if no selected layer has >=2 images, try single image
+            if not selected_filter:
+                for layer in layers:
+                    if layer in images_by_filter:
+                        selected_filter = layer
+                        selected_images = sorted(images_by_filter[layer])
+                        print(f"   ⚠️ Using selected layer '{layer}' with only {len(selected_images)} image(s)")
+                        break
+        
+        # Priority 2: If no layers selected or no matching images, use any filter with >=2 images
+        if not selected_filter:
+            print(f"   No matching selected layers, searching for any filter with multiple images...")
+            for filter_type, imgs in images_by_filter.items():
+                if len(imgs) >= 2:
+                    selected_filter = filter_type
+                    selected_images = sorted(imgs)
+                    print(f"   ✅ Fallback to '{filter_type}' with {len(selected_images)} images")
+                    break
+        
+        # Priority 3: Last resort - use any available filter
+        if not selected_filter and images_by_filter:
+            selected_filter = list(images_by_filter.keys())[0]
+            selected_images = sorted(images_by_filter[selected_filter])
+            print(f"   ⚠️ Last resort: using '{selected_filter}' with {len(selected_images)} image(s)")
+        
+        # Select first (oldest) and last (newest) images
+        if len(selected_images) >= 2:
+            image_before = selected_images[0]
+            image_after = selected_images[-1]
+            image_paths = [
+                os.path.join(SATELLITE_DATA_DIR, image_before),
+                os.path.join(SATELLITE_DATA_DIR, image_after)
+            ]
+            print(f"   ✅ Selected filter type: {selected_filter}")
+            print(f"   ✅ Before image: {image_before}")
+            print(f"   ✅ After image: {image_after}")
+            images_analyzed = f"{image_before}, {image_after}"
+            
+            # Extract dates from filenames (format: sentinel2_YYYYMMDD_FILTER_HASH)
+            date_before = image_before.split('_')[1] if len(image_before.split('_')) > 1 else 'unknown'
+            date_after = image_after.split('_')[1] if len(image_after.split('_')) > 1 else 'unknown'
+            
+            # Format dates as YYYY-MM-DD
+            if len(date_before) == 8:
+                date_before_formatted = f"{date_before[:4]}-{date_before[4:6]}-{date_before[6:8]}"
+            else:
+                date_before_formatted = date_before
+            
+            if len(date_after) == 8:
+                date_after_formatted = f"{date_after[:4]}-{date_after[4:6]}-{date_after[6:8]}"
+            else:
+                date_after_formatted = date_after
+                
+        else:
+            # Only one image available
+            image_filename = selected_images[0]
+            image_paths = [os.path.join(SATELLITE_DATA_DIR, image_filename)]
+            print(f"   ⚠️ Only one image available: {image_filename}")
+            images_analyzed = image_filename
+            
+            # Extract date from filename
+            date_single = image_filename.split('_')[1] if len(image_filename.split('_')) > 1 else 'unknown'
+            if len(date_single) == 8:
+                date_single_formatted = f"{date_single[:4]}-{date_single[4:6]}-{date_single[6:8]}"
+            else:
+                date_single_formatted = date_single
 
         # Step 5: Build enhanced prompt
         print(f"\n🔍 [DEBUG] Step 5: Building enhanced prompt...")
+        
+        if len(image_paths) == 2:
+            image_context = f"Two satellite images of the selected region:\n  - BEFORE image: {date_before_formatted} ({selected_filter.upper()} filter)\n  - AFTER image: {date_after_formatted} ({selected_filter.upper()} filter)"
+            analysis_instruction = f"Compare the two {selected_filter.upper()} images captured on {date_before_formatted} (BEFORE) and {date_after_formatted} (AFTER). Analyze the changes over time between these specific dates. Focus on temporal changes, vegetation recovery, burn progression, or environmental shifts."
+        else:
+            image_context = f"Satellite image captured on {date_single_formatted} using {selected_filter.upper()} filter"
+            analysis_instruction = f"Analyze the {selected_filter.upper()} image from {date_single_formatted} and provide detailed observations."
+        
         enhanced_prompt = f"""You are FireDoc VLM, an expert AI assistant for analyzing satellite imagery to assess wildfire burn severity and environmental impact.
 
 User's Question: {prompt}
 
 Context:
-- Image: Satellite imagery of the selected region
+- Images: {image_context}
 - Region Coordinates: North {region['north']}°, South {region['south']}°, East {region['east']}°, West {region['west']}°
-- Date Range: {date_range['start']} to {date_range['end']}
-- Data Layers: {', '.join(layers)}
 
-Please analyze the image and provide a detailed, helpful response to the user's question. Focus on:
-- Burn severity (if applicable)
+{analysis_instruction}
+
+Please provide a detailed, helpful response focusing on:
+- Burn severity and changes over time (if applicable)
 - Vegetation health and recovery
 - Environmental impact assessment
-- Any visible patterns or anomalies
+- Any visible patterns, anomalies, or temporal changes
 
-Be specific and use quantitative observations when possible."""
+Be specific and use quantitative observations when possible. Reference the specific dates mentioned above in your analysis. Keep your answers concise (max 6-8 sentences) and formatted in markdown."""
 
         print(f"   ✅ Enhanced prompt built ({len(enhanced_prompt)} characters)")
 
         # Step 6: Call AI analysis
         print(f"\n🔍 [DEBUG] Step 6: Calling AI analysis function...")
-        ai_response = analyze_image_with_vlm(image_path, enhanced_prompt, conversation_history)
+        ai_response = analyze_image_with_vlm(image_paths, enhanced_prompt, conversation_history)
 
         if not ai_response:
             print(f"⚠️ [WARNING] AI returned empty response!")
@@ -760,7 +863,8 @@ Be specific and use quantitative observations when possible."""
         response_data = {
             "success": True,
             "response": ai_response,
-            "image_analyzed": image_filename
+            "images_analyzed": images_analyzed,
+            "comparison_mode": len(image_paths) == 2
         }
         print(f"   ✅ Response prepared, sending to client...")
         print("="*80 + "\n")
