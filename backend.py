@@ -786,22 +786,45 @@ def analyze_with_vlm():
             print(f"   ✅ Before image: {image_before}")
             print(f"   ✅ After image: {image_after}")
             images_analyzed = f"{image_before}, {image_after}"
+            
+            # Extract dates from filenames (format: sentinel2_YYYYMMDD_FILTER_HASH)
+            date_before = image_before.split('_')[1] if len(image_before.split('_')) > 1 else 'unknown'
+            date_after = image_after.split('_')[1] if len(image_after.split('_')) > 1 else 'unknown'
+            
+            # Format dates as YYYY-MM-DD
+            if len(date_before) == 8:
+                date_before_formatted = f"{date_before[:4]}-{date_before[4:6]}-{date_before[6:8]}"
+            else:
+                date_before_formatted = date_before
+            
+            if len(date_after) == 8:
+                date_after_formatted = f"{date_after[:4]}-{date_after[4:6]}-{date_after[6:8]}"
+            else:
+                date_after_formatted = date_after
+                
         else:
             # Only one image available
             image_filename = selected_images[0]
             image_paths = [os.path.join(SATELLITE_DATA_DIR, image_filename)]
             print(f"   ⚠️ Only one image available: {image_filename}")
             images_analyzed = image_filename
+            
+            # Extract date from filename
+            date_single = image_filename.split('_')[1] if len(image_filename.split('_')) > 1 else 'unknown'
+            if len(date_single) == 8:
+                date_single_formatted = f"{date_single[:4]}-{date_single[4:6]}-{date_single[6:8]}"
+            else:
+                date_single_formatted = date_single
 
         # Step 5: Build enhanced prompt
         print(f"\n🔍 [DEBUG] Step 5: Building enhanced prompt...")
         
         if len(image_paths) == 2:
-            image_context = "Two satellite images of the selected region (BEFORE and AFTER)"
-            analysis_instruction = "Compare the two images (before and after) and analyze the changes over time. Focus on temporal changes, vegetation recovery, burn progression, or environmental shifts."
+            image_context = f"Two satellite images of the selected region:\n  - BEFORE image: {date_before_formatted} ({selected_filter.upper()} filter)\n  - AFTER image: {date_after_formatted} ({selected_filter.upper()} filter)"
+            analysis_instruction = f"Compare the two {selected_filter.upper()} images captured on {date_before_formatted} (BEFORE) and {date_after_formatted} (AFTER). Analyze the changes over time between these specific dates. Focus on temporal changes, vegetation recovery, burn progression, or environmental shifts."
         else:
-            image_context = "Satellite imagery of the selected region"
-            analysis_instruction = "Analyze the image and provide detailed observations."
+            image_context = f"Satellite image captured on {date_single_formatted} using {selected_filter.upper()} filter"
+            analysis_instruction = f"Analyze the {selected_filter.upper()} image from {date_single_formatted} and provide detailed observations."
         
         enhanced_prompt = f"""You are FireDoc VLM, an expert AI assistant for analyzing satellite imagery to assess wildfire burn severity and environmental impact.
 
@@ -810,8 +833,6 @@ User's Question: {prompt}
 Context:
 - Images: {image_context}
 - Region Coordinates: North {region['north']}°, South {region['south']}°, East {region['east']}°, West {region['west']}°
-- Date Range: {date_range['start']} to {date_range['end']}
-- Data Layers: {', '.join(layers)}
 
 {analysis_instruction}
 
@@ -821,7 +842,7 @@ Please provide a detailed, helpful response focusing on:
 - Environmental impact assessment
 - Any visible patterns, anomalies, or temporal changes
 
-Be specific and use quantitative observations when possible."""
+Be specific and use quantitative observations when possible. Reference the specific dates mentioned above in your analysis."""
 
         print(f"   ✅ Enhanced prompt built ({len(enhanced_prompt)} characters)")
 
