@@ -172,3 +172,4 @@ if len(products) > 0:
     else:
         print(f"\n❌ Download failed: {response.status_code}")
         print(f"Error: {response.text}")
+        
