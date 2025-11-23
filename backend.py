@@ -206,23 +206,92 @@ def query_sentinel_products_with_pagination(region: dict, date_range: dict, toke
     return all_products
 
 
-def download_satellite_image_for_product(product: dict, region: dict, token: str, max_cloud: int = 35):
+def get_evalscript_for_layer(layer: str) -> str:
     """
-    Download a Sentinel-2 true color JPEG for a specific product.
-    Returns dict with metadata or raises Exception on failure.
+    Generate the correct evalscript based on the selected layer.
+
+    Args:
+        layer: Layer type ('truecolor', 'ndvi', 'nbr', etc.)
+
+    Returns:
+        Evalscript string for Sentinel Hub API
     """
-    # Extract product information
-    product_name = product.get('Name', 'unknown')
-    sensing_start = product.get('ContentDate', {}).get('Start', '')
-    
-    if not sensing_start:
-        raise ValueError(f"No sensing date for product {product_name}")
-    
-    # Parse sensing date
-    sensing_date = sensing_start.split('T')[0]
-    
-    # Build evalscript (true color)
-    evalscript = """
+    if layer == 'ndvi':
+        # NDVI (Normalized Difference Vegetation Index)
+        # Measures vegetation health: -1 to +1
+        # Green = healthy vegetation, Red/Brown = bare soil/dead vegetation
+        return """
+//VERSION=3
+function setup() {
+  return {
+    input: ["B04", "B08", "SCL"],
+    output: { bands: 3 }
+  };
+}
+
+function evaluatePixel(sample) {
+  // Calculate NDVI: (NIR - Red) / (NIR + Red)
+  let ndvi = (sample.B08 - sample.B04) / (sample.B08 + sample.B04);
+  
+  // Color visualization
+  if (ndvi < 0) {
+    // Water or clouds (blue)
+    return [0.2, 0.2, 1.0];
+  } else if (ndvi < 0.2) {
+    // Bare soil, burned areas (brown/red)
+    return [0.8, 0.4, 0.2];
+  } else if (ndvi < 0.4) {
+    // Sparse vegetation (yellow/light green)
+    return [0.9, 0.9, 0.3];
+  } else if (ndvi < 0.6) {
+    // Moderate vegetation (green)
+    return [0.3, 0.8, 0.3];
+  } else {
+    // Dense vegetation (dark green)
+    return [0.0, 0.5, 0.0];
+  }
+}
+"""
+
+    elif layer == 'nbr':
+        # NBR (Normalized Burn Ratio)
+        # Used to detect burned areas
+        return """
+//VERSION=3
+function setup() {
+  return {
+    input: ["B08", "B12"],
+    output: { bands: 3 }
+  };
+}
+
+function evaluatePixel(sample) {
+  // Calculate NBR: (NIR - SWIR) / (NIR + SWIR)
+  let nbr = (sample.B08 - sample.B12) / (sample.B08 + sample.B12);
+  
+  // Color visualization for burn severity
+  if (nbr < -0.25) {
+    // High severity burn (dark red)
+    return [0.5, 0.0, 0.0];
+  } else if (nbr < -0.1) {
+    // Moderate-high severity (red)
+    return [0.9, 0.2, 0.0];
+  } else if (nbr < 0.1) {
+    // Moderate-low severity (orange)
+    return [1.0, 0.6, 0.0];
+  } else if (nbr < 0.3) {
+    // Low severity / unburned (yellow)
+    return [1.0, 1.0, 0.3];
+  } else {
+    // Healthy vegetation (green)
+    return [0.0, 0.7, 0.0];
+  }
+}
+"""
+
+    else:  # 'truecolor' or default
+        # True color RGB
+        return """
 //VERSION=3
 function setup() {
   return {
@@ -234,7 +303,35 @@ function evaluatePixel(sample) {
   return [2.5 * sample.B04, 2.5 * sample.B03, 2.5 * sample.B02];
 }
 """
-    
+
+
+def download_satellite_image_for_product(product: dict, region: dict, token: str, layer: str = 'truecolor', max_cloud: int = 35):
+    """
+    Download a Sentinel-2 image for a specific product and layer.
+
+    Args:
+        product: Product metadata from Copernicus
+        region: Geographic bounds
+        token: Copernicus API token
+        layer: Layer type ('truecolor', 'ndvi', 'nbr')
+        max_cloud: Maximum cloud coverage percentage
+
+    Returns:
+        dict with metadata or raises Exception on failure
+    """
+    # Extract product information
+    product_name = product.get('Name', 'unknown')
+    sensing_start = product.get('ContentDate', {}).get('Start', '')
+
+    if not sensing_start:
+        raise ValueError(f"No sensing date for product {product_name}")
+
+    # Parse sensing date
+    sensing_date = sensing_start.split('T')[0]
+
+    # Get the appropriate evalscript for the selected layer
+    evalscript = get_evalscript_for_layer(layer)
+
     minLon = region['west']
     minLat = region['south']
     maxLon = region['east']
@@ -285,7 +382,8 @@ function evaluatePixel(sample) {
     
     content = resp.content
     hash_part = hashlib.sha256(content[:2000]).hexdigest()[:8]
-    filename = f"sentinel2_{sensing_date.replace('-', '')}_{hash_part}.jpg"
+    # Include layer name in filename to avoid overwrites
+    filename = f"sentinel2_{sensing_date.replace('-', '')}_{layer}_{hash_part}.jpg"
     save_path = os.path.join(SATELLITE_DATA_DIR, filename)
     
     with open(save_path, 'wb') as f:
@@ -310,11 +408,25 @@ function evaluatePixel(sample) {
     }
 
 
-def download_all_satellite_images(region: dict, date_range: dict, max_cloud: int = 35, max_images: int = 10):
+def download_all_satellite_images(region: dict, date_range: dict, layers: list = None, max_cloud: int = 35, max_images: int = 10):
     """
     Download ALL Sentinel-2 images for the date range using OData API with pagination.
-    Returns list of image metadata dictionaries.
+    Downloads images for each requested layer.
+
+    Args:
+        region: Geographic bounds
+        date_range: Start and end dates
+        layers: List of layer types to download (e.g., ['truecolor', 'ndvi', 'nbr'])
+        max_cloud: Maximum cloud coverage percentage
+        max_images: Maximum number of products to download (per layer)
+
+    Returns:
+        List of image metadata dictionaries
     """
+    # Default to truecolor if no layers specified
+    if not layers:
+        layers = ['truecolor']
+
     print("🔑 Obtaining Copernicus token...")
     token = get_copernicus_token()
     print("✅ Token acquired")
@@ -328,24 +440,30 @@ def download_all_satellite_images(region: dict, date_range: dict, max_cloud: int
     
     # Limit downloads to avoid overwhelming the system
     products_to_download = products[:max_images]
-    print(f"\n📥 Downloading {len(products_to_download)} image(s) (limited from {len(products)} total)...")
-    
+    total_downloads = len(products_to_download) * len(layers)
+    print(f"\n📥 Downloading {total_downloads} image(s): {len(products_to_download)} products × {len(layers)} layers")
+    print(f"   Layers: {', '.join(layers)}")
+
     downloaded_images = []
     failed_count = 0
     
     for idx, product in enumerate(products_to_download, 1):
-        try:
-            print(f"\n🖼️  Image {idx}/{len(products_to_download)}: {product.get('Name', 'unknown')}")
-            
-            img_meta = download_satellite_image_for_product(product, region, token, max_cloud)
-            downloaded_images.append(img_meta)
-            
-            print(f"   ✅ Downloaded: {img_meta['filename']} ({img_meta['size_kb']} KB)")
-            
-        except Exception as e:
-            failed_count += 1
-            print(f"   ❌ Failed: {str(e)}")
-    
+        # Download each layer for this product
+        for layer in layers:
+            try:
+                print(f"\n🖼️  Image {idx}/{len(products_to_download)} - Layer: {layer.upper()}")
+                print(f"   Product: {product.get('Name', 'unknown')}")
+
+                img_meta = download_satellite_image_for_product(product, region, token, layer, max_cloud)
+                img_meta['layer'] = layer  # Add layer info to metadata
+                downloaded_images.append(img_meta)
+
+                print(f"   ✅ Downloaded: {img_meta['filename']} ({img_meta['size_kb']} KB)")
+
+            except Exception as e:
+                failed_count += 1
+                print(f"   ❌ Failed to download {layer}: {str(e)}")
+
     print(f"\n📊 Download Summary: {len(downloaded_images)} succeeded, {failed_count} failed")
     return downloaded_images
 
@@ -437,8 +555,9 @@ def fetch_satellite_data():
         download_error = None
         print("\n🛰️ Downloading ALL Sentinel-2 images for date range (with pagination)...")
         print(f"   📅 Date Range: {date_range['start']} to {date_range['end']}")
+        print(f"   🎨 Layers: {', '.join(layers) if layers else 'truecolor (default)'}")
         try:
-            downloaded_images = download_all_satellite_images(region, date_range, max_cloud=35, max_images=10)
+            downloaded_images = download_all_satellite_images(region, date_range, layers=layers, max_cloud=35, max_images=10)
         except Exception as dl_err:
             download_error = str(dl_err)
             print(f"⚠️ Download failed: {download_error}")
