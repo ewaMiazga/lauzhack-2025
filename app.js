@@ -514,11 +514,22 @@ function addUserMessage(content) {
 function addAIMessage(content) {
     const responseArea = document.getElementById('response-area');
     
+    // Configure marked.js options for better rendering
+    marked.setOptions({
+        breaks: true,
+        gfm: true,
+        headerIds: true,
+        mangle: false
+    });
+    
+    // Convert markdown to HTML
+    const htmlContent = marked.parse(content);
+    
     const messageDiv = document.createElement('div');
     messageDiv.className = 'message ai-message';
     messageDiv.innerHTML = `
         <div class="message-header">🤖 FireDoc VLM</div>
-        <div class="message-content">${escapeHtml(content)}</div>
+        <div class="message-content markdown-content">${htmlContent}</div>
     `;
     
     responseArea.appendChild(messageDiv);
