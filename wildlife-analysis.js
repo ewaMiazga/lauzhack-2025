@@ -241,25 +241,127 @@ function displayVLMResults(analysisData) {
     const analysis = analysisData.analysis;
     const metadata = analysisData.video_metadata;
     
-    // Parse the VLM response to extract structured data
-    // The VLM response is raw text, so we display it directly
+    // Parse the VLM response to extract species list
+    const speciesList = parseSpeciesFromAnalysis(analysis);
     
-    // Update summary cards with basic info
-    document.getElementById('species-count').textContent = '—';
+    // Update summary cards
+    document.getElementById('species-count').textContent = speciesList.length || '—';
     document.getElementById('sightings-count').textContent = analysisData.frames_analyzed || '—';
     const duration = Math.floor(metadata.duration);
     document.getElementById('analysis-duration').textContent = `${Math.floor(duration / 60)}:${(duration % 60).toString().padStart(2, '0')}`;
     
-    // Display the full VLM analysis as the AI summary
-    document.getElementById('ai-summary-content').innerHTML = `<p style="white-space: pre-wrap;">${analysis}</p>`;
+    // Render the VLM analysis as Markdown
+    const summaryContent = document.getElementById('ai-summary-content');
+    if (typeof marked !== 'undefined') {
+        summaryContent.innerHTML = marked.parse(analysis);
+    } else {
+        summaryContent.innerHTML = `<p style="white-space: pre-wrap;">${analysis}</p>`;
+    }
     
-    // Hide species cards and timeline since we're showing raw VLM output
-    // You can parse the VLM output later to populate these sections
+    // Display detected species
     const speciesGrid = document.getElementById('species-grid');
-    speciesGrid.innerHTML = '<p class="placeholder-text">Detailed species breakdown will be parsed from the analysis above.</p>';
+    if (speciesList.length > 0) {
+        speciesGrid.innerHTML = '';
+        speciesList.forEach(species => {
+            const card = document.createElement('div');
+            card.className = 'species-card';
+            card.innerHTML = `
+                <div class="species-header">
+                    <span class="species-icon">${getAnimalIcon(species)}</span>
+                    <span class="species-name">${species}</span>
+                </div>
+                <div class="species-stats">
+                    <p><strong>Status:</strong> Detected in footage</p>
+                </div>
+            `;
+            speciesGrid.appendChild(card);
+        });
+    } else {
+        speciesGrid.innerHTML = '<p class="placeholder-text">No species explicitly listed. See detailed analysis above.</p>';
+    }
     
     const timelineContainer = document.getElementById('timeline-container');
-    timelineContainer.innerHTML = '<p class="placeholder-text">Timeline will be parsed from the analysis above.</p>';
+    timelineContainer.innerHTML = '<p class="placeholder-text">Timeline information is included in the detailed analysis above.</p>';
+}
+
+// Parse species from VLM analysis
+function parseSpeciesFromAnalysis(analysis) {
+    const speciesList = [];
+    
+    // Look for "SPECIES DETECTED:" section
+    const speciesMatch = analysis.match(/SPECIES DETECTED:(.*?)(?=\n\n|DETAILED ANALYSIS:|$)/is);
+    
+    if (speciesMatch) {
+        const speciesSection = speciesMatch[1];
+        // Extract lines starting with "- "
+        const matches = speciesSection.matchAll(/^-\s*(.+)$/gm);
+        for (const match of matches) {
+            const species = match[1].trim();
+            if (species && !speciesList.includes(species)) {
+                speciesList.push(species);
+            }
+        }
+    }
+    
+    return speciesList;
+}
+
+// Get animal icon based on species name
+function getAnimalIcon(speciesName) {
+    const name = speciesName.toLowerCase();
+    
+    // Common animals with their emojis
+    const iconMap = {
+        'deer': '🦌',
+        'fox': '🦊',
+        'wolf': '🐺',
+        'bear': '🐻',
+        'rabbit': '🐰',
+        'squirrel': '🐿️',
+        'raccoon': '🦝',
+        'beaver': '🦫',
+        'skunk': '🦨',
+        'badger': '🦡',
+        'otter': '🦦',
+        'moose': '🫎',
+        'bison': '🦬',
+        'bird': '🐦',
+        'eagle': '🦅',
+        'owl': '🦉',
+        'duck': '🦆',
+        'turkey': '🦃',
+        'goose': '🦢',
+        'hawk': '🦅',
+        'crow': '🐦‍⬛',
+        'snake': '🐍',
+        'turtle': '🐢',
+        'frog': '🐸',
+        'lizard': '🦎',
+        'bat': '🦇',
+        'mouse': '🐭',
+        'rat': '🐀',
+        'chipmunk': '🐿️',
+        'porcupine': '🦔',
+        'coyote': '🐺',
+        'mountain lion': '🦁',
+        'cougar': '🦁',
+        'puma': '🦁',
+        'bobcat': '🐈',
+        'lynx': '🐈',
+        'elk': '🦌',
+        'caribou': '🦌',
+        'antelope': '🦌'
+    };
+    
+    // Find matching icon
+    for (const [key, icon] of Object.entries(iconMap)) {
+        if (name.includes(key)) {
+            return icon;
+        }
+    }
+    
+    // Default icon
+    return '🦊';
 }
 
 // Display Results (kept for backward compatibility)

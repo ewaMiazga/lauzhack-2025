@@ -146,21 +146,37 @@ def analyze_frames_with_vlm(frame_paths, user_prompt="", sample_rate=5):
     sampled_frames = frame_paths[::sample_rate] if len(frame_paths) > sample_rate else frame_paths
     print(f"[VLM] Analyzing {len(sampled_frames)} frames (sampled from {len(frame_paths)} total)")
     
-    # Default prompt if none provided
-    if not user_prompt:
-        user_prompt = """Analyze this video for wildlife detection. For each frame:
-1. Identify all animals visible
-2. Note their species if recognizable
-3. Describe their behavior
-4. Estimate time of appearance
-5. Note any notable patterns or behaviors
+    # System prompt for structured wildlife detection
+    system_prompt = """You are a wildlife detection expert analyzing camera trap footage. 
 
-Provide a comprehensive summary of all wildlife observed."""
+IMPORTANT: Start your response with a "SPECIES DETECTED:" section listing all species found (one per line with format "- Species Name").
+
+Then provide detailed analysis including:
+- Specific timestamps or frame numbers where animals appear
+- Animal behaviors and activities
+- Confidence levels for identifications
+- Environmental context
+
+Example format:
+SPECIES DETECTED:
+- White-tailed Deer
+- Red Fox
+- Wild Turkey
+
+DETAILED ANALYSIS:
+[Your detailed observations here...]
+"""
     
-    print(f"[VLM] Using prompt: {user_prompt[:100]}...")
+    # Combine system prompt with user prompt
+    if user_prompt:
+        full_prompt = f"{system_prompt}\n\nUSER REQUEST: {user_prompt}"
+    else:
+        full_prompt = system_prompt
+    
+    print(f"[VLM] Using prompt: {full_prompt[:100]}...")
     
     # Prepare message content with all sampled frames
-    message_content = [{"type": "text", "text": user_prompt}]
+    message_content = [{"type": "text", "text": full_prompt}]
     
     # Add frames as images
     print(f"[VLM] Encoding {len(sampled_frames)} frames to base64...")
