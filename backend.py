@@ -716,7 +716,7 @@ def analyze_with_vlm():
 
         # Step 4: Select image
         print(f"\n🔍 [DEBUG] Step 4: Selecting image to analyze...")
-        image_filename = available_images[0]
+        image_filename = available_images[-1]
         image_path = os.path.join(SATELLITE_DATA_DIR, image_filename)
         print(f"   ✅ Selected image: {image_filename}")
         print(f"   Full path: {image_path}")
