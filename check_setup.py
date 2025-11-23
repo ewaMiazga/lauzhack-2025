@@ -1,5 +1,5 @@
 """
-Quick Start Script for FireDoc VLM
+Quick Start Script for SATUK VLM
 ===================================
 This script helps you get started quickly by checking your setup.
 """
@@ -12,7 +12,7 @@ def check_setup():
     """Check if the project is properly configured."""
 
     print("\n" + "="*60)
-    print("🔥 FireDoc VLM - Setup Checker")
+    print("🔥 SATUK VLM - Setup Checker")
     print("="*60 + "\n")
 
     issues = []

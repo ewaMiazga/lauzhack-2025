@@ -1,5 +1,5 @@
 """
-FireDoc VLM Backend Server
+SATUK VLM Backend Server
 ===========================
 This Flask server connects the frontend map interface with:
 1. Together AI Vision API - for analyzing satellite images
@@ -826,7 +826,7 @@ def analyze_with_vlm():
             image_context = f"Satellite image captured on {date_single_formatted} using {selected_filter.upper()} filter"
             analysis_instruction = f"Analyze the {selected_filter.upper()} image from {date_single_formatted} and provide detailed observations."
         
-        enhanced_prompt = f"""You are FireDoc VLM, an expert AI assistant for analyzing satellite imagery to assess wildfire burn severity and environmental impact.
+        enhanced_prompt = f"""You are SATUK VLM (Satellite AI for Terrain Understanding & Knowledge), an expert AI assistant for analyzing satellite imagery to assess wildfire burn severity and environmental impact.
 
 User's Question: {prompt}
 
@@ -945,7 +945,7 @@ def health_check():
 
 if __name__ == '__main__':
     print("\n" + "="*60)
-    print("🔥 FireDoc VLM Backend Server")
+    print("🔥 SATUK VLM Backend Server")
     print("="*60)
     print(f"📁 Satellite Data Directory: {SATELLITE_DATA_DIR}")
     print(f"📁 Images Directory: {IMAGES_DIR}")

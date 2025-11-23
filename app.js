@@ -528,7 +528,7 @@ function addAIMessage(content) {
     const messageDiv = document.createElement('div');
     messageDiv.className = 'message ai-message';
     messageDiv.innerHTML = `
-        <div class="message-header">🤖 FireDoc VLM</div>
+        <div class="message-header">🤖 SATUK VLM</div>
         <div class="message-content markdown-content">${htmlContent}</div>
     `;
     
@@ -563,7 +563,7 @@ function addLoadingMessage() {
     messageDiv.className = 'message ai-message';
     messageDiv.id = loadingId;
     messageDiv.innerHTML = `
-        <div class="message-header">🤖 FireDoc VLM</div>
+        <div class="message-header">🤖 SATUK VLM</div>
         <div class="message-content loading">
             Analyzing
             <div class="loading-dots">
@@ -603,5 +603,5 @@ document.addEventListener('DOMContentLoaded', () => {
     initPromptHandler();
     initOverlayControls();
 
-    console.log('🔥 FireDoc VLM initialized successfully!');
+    console.log('🔥 SATUK VLM initialized successfully!');
 });
