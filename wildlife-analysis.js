@@ -118,12 +118,63 @@ analyzeBtn.addEventListener('click', async () => {
     resultsSection.scrollIntoView({ behavior: 'smooth' });
     
     try {
-        // TODO: Send video and prompt to backend for analysis
-        // For now, simulate with mock data
-        await simulateAnalysis(customPrompt);
+        console.log('[FRONTEND] Starting video upload...');
+        console.log('[FRONTEND] Video file:', videoFile.name, videoFile.size, 'bytes');
+        console.log('[FRONTEND] Custom prompt:', customPrompt || '(none)');
+        
+        // Upload video to backend
+        const formData = new FormData();
+        formData.append('video', videoFile);
+        formData.append('prompt', customPrompt);
+        
+        console.log('[FRONTEND] Uploading to http://localhost:5001/api/upload-video');
+        const uploadResponse = await fetch('http://localhost:5001/api/upload-video', {
+            method: 'POST',
+            body: formData
+        });
+        
+        console.log('[FRONTEND] Upload response status:', uploadResponse.status);
+        
+        if (!uploadResponse.ok) {
+            const errorData = await uploadResponse.json();
+            console.error('[FRONTEND] Upload error:', errorData);
+            throw new Error(errorData.error || 'Failed to upload video');
+        }
+        
+        const uploadData = await uploadResponse.json();
+        console.log('[FRONTEND] Video uploaded successfully:', uploadData);
+        
+        // Analyze video
+        console.log('[FRONTEND] Starting video analysis...');
+        const analyzeResponse = await fetch('http://localhost:5001/api/analyze-video', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                video_id: uploadData.video_id,
+                prompt: customPrompt,
+                sample_rate: 5
+            })
+        });
+        
+        console.log('[FRONTEND] Analysis response status:', analyzeResponse.status);
+        
+        if (!analyzeResponse.ok) {
+            const errorData = await analyzeResponse.json();
+            console.error('[FRONTEND] Analysis error:', errorData);
+            throw new Error(errorData.error || 'Failed to analyze video');
+        }
+        
+        const analysisData = await analyzeResponse.json();
+        console.log('[FRONTEND] Analysis complete:', analysisData);
+        
+        // Display results from VLM
+        displayVLMResults(analysisData);
+        
     } catch (error) {
-        console.error('Analysis error:', error);
-        alert('An error occurred during analysis. Please try again.');
+        console.error('[FRONTEND] Error:', error);
+        alert(`An error occurred: ${error.message}\n\nCheck the browser console for details.`);
         resultsSection.style.display = 'none';
     }
 });
@@ -176,7 +227,42 @@ async function simulateAnalysis(customPrompt = '') {
     displayResults(mockResults);
 }
 
-// Display Results
+// Display VLM Results
+function displayVLMResults(analysisData) {
+    loadingState.style.display = 'none';
+    resultsDisplay.style.display = 'block';
+    
+    // Show video at the top of results
+    const resultsVideoPreview = document.getElementById('results-video-preview');
+    const resultsVideo = document.getElementById('results-video');
+    resultsVideo.src = videoPreview.src; // Copy the video source
+    resultsVideoPreview.style.display = 'block';
+    
+    const analysis = analysisData.analysis;
+    const metadata = analysisData.video_metadata;
+    
+    // Parse the VLM response to extract structured data
+    // The VLM response is raw text, so we display it directly
+    
+    // Update summary cards with basic info
+    document.getElementById('species-count').textContent = '—';
+    document.getElementById('sightings-count').textContent = analysisData.frames_analyzed || '—';
+    const duration = Math.floor(metadata.duration);
+    document.getElementById('analysis-duration').textContent = `${Math.floor(duration / 60)}:${(duration % 60).toString().padStart(2, '0')}`;
+    
+    // Display the full VLM analysis as the AI summary
+    document.getElementById('ai-summary-content').innerHTML = `<p style="white-space: pre-wrap;">${analysis}</p>`;
+    
+    // Hide species cards and timeline since we're showing raw VLM output
+    // You can parse the VLM output later to populate these sections
+    const speciesGrid = document.getElementById('species-grid');
+    speciesGrid.innerHTML = '<p class="placeholder-text">Detailed species breakdown will be parsed from the analysis above.</p>';
+    
+    const timelineContainer = document.getElementById('timeline-container');
+    timelineContainer.innerHTML = '<p class="placeholder-text">Timeline will be parsed from the analysis above.</p>';
+}
+
+// Display Results (kept for backward compatibility)
 function displayResults(results) {
     loadingState.style.display = 'none';
     resultsDisplay.style.display = 'block';

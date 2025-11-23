@@ -2,4 +2,4 @@ python-dotenv
 together
 flask
 flask-cors
-
+opencv-python

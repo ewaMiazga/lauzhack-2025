@@ -707,6 +707,28 @@ body {
     color: var(--text-dark);
 }
 
+.results-video-preview {
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.results-video-preview h4 {
+    color: var(--text-dark);
+    margin-bottom: 15px;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+#results-video {
+    width: 100%;
+    max-width: 800px;
+    border-radius: 8px;
+    background: #000;
+    margin: 0 auto;
+    display: block;
+}
+
 .analysis-config-section .prompt-section {
     margin-bottom: 20px;
 }
