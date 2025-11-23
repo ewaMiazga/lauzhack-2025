@@ -210,6 +210,25 @@ function updateFetchButton() {
     fetchBtn.disabled = !(hasRegion && hasDateRange && hasLayers);
 }
 
+// Utility: shorten filename to keep date + layer token
+function shortenFilename(filename) {
+    if (!filename) return filename;
+    const base = filename.split('/').pop();
+    const nameNoExt = base.replace(/\.(jpg|jpeg|png|tif|tiff)$/i, '');
+    const parts = nameNoExt.split(/[_-]/); // allow both _ and - as separators
+    const datePart = parts.find(p => /^\d{8}$/.test(p));
+    let dateStr = '';
+    if (datePart) {
+        dateStr = `${datePart.slice(0,4)}-${datePart.slice(4,6)}-${datePart.slice(6,8)}`;
+    }
+    const layerTokens = ['nbr','dnbr','ndvi','truecolor','swir','firms'];
+    const layerPart = parts.find(p => layerTokens.includes(p.toLowerCase()));
+    const layerStr = layerPart ? layerPart.toUpperCase() : '';
+    const short = [dateStr, layerStr].filter(Boolean).join(' ');
+    // Fallback: if nothing matched, attempt heuristic to display first two segments
+    return short || parts.slice(0,2).join(' ');
+}
+
 // Render imagery gallery
 function renderImageryGallery(images) {
     const gallery = document.getElementById('imagery-gallery');
@@ -228,7 +247,6 @@ function renderImageryGallery(images) {
         card.className = 'imagery-card';
 
         const thumbnail = document.createElement('img');
-        // Thumbnails can use the same URL; browsers will size them down
         thumbnail.src = img.url;
         thumbnail.alt = img.filename;
 
@@ -237,8 +255,9 @@ function renderImageryGallery(images) {
 
         const info = document.createElement('div');
         info.className = 'info';
+        const shortName = shortenFilename(img.filename);
         info.innerHTML = `
-            <strong>${img.filename}</strong>
+            <strong title="${img.filename}">${shortName}</strong>
             <span>${img.size_kb} KB</span>
         `;
 
@@ -246,13 +265,16 @@ function renderImageryGallery(images) {
         actions.className = 'actions';
 
         const viewBtn = document.createElement('button');
-        viewBtn.className = 'btn-small';
-        viewBtn.textContent = 'Overlay on Map';
+        viewBtn.className = 'btn-small btn-overlay';
+        viewBtn.type = 'button';
+        viewBtn.setAttribute('aria-label', 'Overlay image on map');
+        viewBtn.innerHTML = '🗺️ <span>Overlay</span>';
         viewBtn.addEventListener('click', () => overlayImageOnMap(img));
 
         const openBtn = document.createElement('a');
-        openBtn.className = 'btn-small';
-        openBtn.textContent = 'Open';
+        openBtn.className = 'btn-small btn-open';
+        openBtn.setAttribute('aria-label', 'Open full image in new tab');
+        openBtn.innerHTML = '🔗 <span>Open</span>';
         openBtn.href = img.url;
         openBtn.target = '_blank';
         openBtn.rel = 'noopener noreferrer';

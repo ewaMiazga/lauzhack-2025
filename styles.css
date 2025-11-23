@@ -253,6 +253,58 @@ body {
     opacity: 0.6;
 }
 
+.btn-small {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    background: linear-gradient(135deg,#fdfdfd,#f3f6f9);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    line-height: 1;
+    transition: background .25s, box-shadow .25s, transform .15s;
+}
+
+.btn-small span {
+    pointer-events: none;
+}
+
+.btn-small:hover {
+    background: linear-gradient(135deg,#ffffff,#eef2f5);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+.btn-small:active {
+    transform: translateY(1px);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.btn-small:focus-visible {
+    outline: 2px solid var(--accent-color);
+    outline-offset: 2px;
+}
+
+.btn-overlay {
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+}
+
+.btn-overlay:hover {
+    background: linear-gradient(135deg,#e8fdf6,#dcf7ef);
+}
+
+.btn-open {
+    border-color: var(--secondary-color);
+    color: var(--secondary-color);
+}
+
+.btn-open:hover {
+    background: linear-gradient(135deg,#e6f1fb,#dbe9f7);
+}
+
 /* Analysis Section */
 .analysis-section {
     background: var(--card-bg);
@@ -449,28 +501,24 @@ body {
     gap: 8px;
 }
 
-.imagery-card .meta .info {
-    display: flex;
-    flex-direction: column;
-    font-size: 0.85rem;
+/* Truncate long filenames */
+.imagery-card .meta .info strong {
+    max-width: 140px;
+    display: inline-block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.imagery-card .meta .actions {
-    display: flex;
-    gap: 6px;
-}
-
-.btn-small {
-    padding: 6px 10px;
-    font-size: 0.85rem;
-    border-radius: 6px;
-    border: 1px solid var(--border-color);
-    background: #f8f9fa;
-    cursor: pointer;
-}
-
-.btn-small:hover {
-    background: #eef2f5;
+/* Stack actions below info if space constrained */
+@media (max-width: 600px) {
+    .imagery-card .meta {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .imagery-card .meta .actions {
+        width: 100%;
+    }
 }
 
 /* Responsive Design */
