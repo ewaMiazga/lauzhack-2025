@@ -842,7 +842,7 @@ Please provide a detailed, helpful response focusing on:
 - Environmental impact assessment
 - Any visible patterns, anomalies, or temporal changes
 
-Be specific and use quantitative observations when possible. Reference the specific dates mentioned above in your analysis."""
+Be specific and use quantitative observations when possible. Reference the specific dates mentioned above in your analysis. Keep your answers concise (max 6-8 sentences) and formatted in markdown."""
 
         print(f"   ✅ Enhanced prompt built ({len(enhanced_prompt)} characters)")
 
