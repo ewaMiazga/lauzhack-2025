@@ -1,4 +1,5 @@
 python-dotenv
 together
 flask
+flask-cors
 
