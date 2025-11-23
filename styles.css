@@ -597,14 +597,14 @@ body {
     gap: 20px;
 }
 
-.upload-section, .wildlife-results-section {
+.upload-section, .analysis-config-section, .wildlife-results-section {
     background: var(--card-bg);
     border-radius: 12px;
     padding: 25px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.upload-section h3, .wildlife-results-section h3 {
+.upload-section h3, .analysis-config-section h3, .wildlife-results-section h3 {
     color: var(--text-dark);
     margin-bottom: 20px;
     font-size: 1.3rem;
@@ -707,20 +707,21 @@ body {
     color: var(--text-dark);
 }
 
-.video-preview-section .prompt-section {
-    margin: 20px 0;
+.analysis-config-section .prompt-section {
+    margin-bottom: 20px;
 }
 
-.video-preview-section .prompt-section h4 {
+.analysis-config-section .prompt-section label {
+    display: block;
     color: var(--text-dark);
     margin-bottom: 10px;
     font-size: 1rem;
     font-weight: 600;
 }
 
-.video-preview-section .prompt-input {
+.analysis-config-section .prompt-input {
     width: 100%;
-    min-height: 100px;
+    min-height: 120px;
     padding: 15px;
     border: 2px solid var(--border-color);
     border-radius: 8px;
@@ -731,12 +732,12 @@ body {
     background: white;
 }
 
-.video-preview-section .prompt-input:focus {
+.analysis-config-section .prompt-input:focus {
     outline: none;
     border-color: var(--secondary-color);
 }
 
-.video-preview-section .prompt-input::placeholder {
+.analysis-config-section .prompt-input::placeholder {
     color: var(--text-light);
     line-height: 1.6;
 }

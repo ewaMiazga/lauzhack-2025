@@ -78,6 +78,9 @@ function handleVideoUpload(file) {
     
     videoPreviewSection.style.display = 'block';
     uploadArea.style.display = 'none';
+    
+    // Enable analyze button
+    analyzeBtn.disabled = false;
 }
 
 // Format File Size

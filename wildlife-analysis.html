@@ -64,14 +64,20 @@
                         <p><strong>Size:</strong> <span id="video-size"></span></p>
                         <p><strong>Duration:</strong> <span id="video-duration"></span></p>
                     </div>
-                    
-                    <!-- Prompt Input -->
-                    <div class="prompt-section">
-                        <h4>💬 Analysis Instructions (Optional)</h4>
-                        <textarea 
-                            id="wildlife-prompt-input" 
-                            class="prompt-input" 
-                            placeholder="Provide custom instructions for the wildlife analysis...
+                </div>
+            </div>
+
+            <!-- Analysis Configuration Section -->
+            <div class="analysis-config-section">
+                <h3>💬 Analysis Configuration</h3>
+                
+                <!-- Prompt Input -->
+                <div class="prompt-section">
+                    <label for="wildlife-prompt-input">Custom Instructions (Optional)</label>
+                    <textarea 
+                        id="wildlife-prompt-input" 
+                        class="prompt-input" 
+                        placeholder="Provide custom instructions for the wildlife analysis...
 
 Examples:
 - Focus on identifying large mammals
@@ -79,12 +85,11 @@ Examples:
 - Count the number of birds visible
 - Identify any endangered species
 - Analyze animal behavior patterns"></textarea>
-                    </div>
-                    
-                    <button class="btn-primary" id="analyze-video-btn">
-                        🔍 Analyze Video for Wildlife
-                    </button>
                 </div>
+                
+                <button class="btn-primary" id="analyze-video-btn" disabled>
+                    🔍 Analyze Video for Wildlife
+                </button>
             </div>
 
             <!-- Analysis Results -->
