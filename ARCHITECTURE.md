@@ -1,4 +1,6 @@
-# 🎨 FireDoc VLM - Visual Architecture
+# 🎨 SATUK VLM - Visual Architecture
+
+**Satellite AI for Terrain Understanding & Knowledge**
 
 ## 📐 System Architecture Diagram
 
@@ -171,7 +173,7 @@
 ┌─────────────────────────────────────────┐
 │ app.js displays in chat interface       │
 │                                          │
-│ 🤖 FireDoc VLM:                         │
+│ 🤖 SATUK VLM:                           │
 │ "Based on the satellite imagery, the    │
 │  burn severity appears to be moderate   │
 │  to high in the selected region..."     │

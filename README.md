@@ -1,110 +1,181 @@
-# 🔥 FireDoc VLM - Satellite Burn Assessment Tool
+# 🔥 SATUK4 VLM
 
-A Vision-Language Model powered tool for analyzing satellite imagery to assess wildfire burn severity and environmental impact.
+**Satellite AI for Terrain Understanding & Knowledge**
 
-## 📋 Project Overview
+An intelligent Vision-Language Model platform that combines satellite imagery analysis with wildlife detection capabilities to provide comprehensive environmental monitoring and assessment.
 
-**FireDoc VLM** combines satellite imagery with AI vision models to help analyze burn areas from wildfires. Users can:
-1. Select regions on an interactive map
-2. Choose date ranges and data layers (NBR, NDVI, SWIR, etc.)
-3. Ask questions about the satellite imagery
-4. Get AI-powered analysis of burn severity and environmental impact
+## 🌍 Project Overview
 
-### Technology Stack
+**SATUK VLM** is a dual-purpose AI-powered environmental analysis platform designed for LauzHack 2025. It leverages state-of-the-art vision models to provide:
+
+### 🛰️ **Satellite Analysis**
+Analyze satellite imagery to assess wildfire burn severity, vegetation health, and environmental impact:
+- Interactive map-based region selection
+- Multi-temporal analysis with date range selection
+- Support for multiple data layers (NBR, NDVI, SWIR, FIRMS)
+- AI-powered burn severity assessment
+- Vegetation recovery tracking
+- Environmental impact analysis
+
+### 🎥 **Wildlife Detection**
+Advanced video analysis for wildlife monitoring and detection:
+- Automatic animal detection and classification
+- Species identification and counting
+- Behavioral analysis
+- Temporal activity pattern recognition
+- Conservation-focused insights
+
+## 🎯 Key Features
+
+✅ **Interactive Map Interface** - Draw regions directly on the map  
+✅ **AI Vision Analysis** - Powered by Together AI's Llama-Vision models  
+✅ **Real-time Streaming** - AI responses stream in real-time  
+✅ **Wildlife Video Analysis** - Detect and classify animals in camera trap footage  
+✅ **Multi-layer Satellite Data** - NBR, NDVI, SWIR, and more  
+✅ **Conversation History** - Follow-up questions with context  
+✅ **Modern UI** - Clean, responsive design  
+
+## 🛠️ Technology Stack
 
 **Frontend:**
 - HTML5, CSS3, JavaScript (Vanilla)
 - Leaflet.js for interactive maps
 - Leaflet Draw for region selection
+- Video.js for wildlife footage playback
 
 **Backend:**
 - Python 3.x
-- Flask web framework
-- Together AI Vision API (Llama-Vision-Free model)
-- Copernicus API for satellite data
+- Flask web framework with CORS support
+- Together AI Vision API
+  - `meta-llama/Llama-Vision-Free` for satellite analysis
+  - `meta-llama/Llama-3.2-90B-Vision-Instruct-Turbo` for wildlife detection
+- Copernicus API for satellite data retrieval
+
+**AI Models:**
+- Vision-Language Models for image understanding
+- Natural language processing for conversational interface
+- Object detection and classification
 
 ## 🏗️ Project Structure
 
 ```
 lauzhack-2025/
-├── index.html              # Main web interface
-├── app.js                  # Frontend JavaScript logic
-├── styles.css              # Styling and layout
-├── backend.py              # Flask API server (MAIN BACKEND)
-├── together-main.py        # Together AI vision demo
-├── api-copernicus.py       # Copernicus satellite data fetcher
-├── requirements.txt        # Python dependencies
-├── images/                 # Test images directory
-│   └── car.jpg            # Sample image for testing
-└── satellite_data/         # Satellite imagery storage
-    └── sentinel2_*.jpg    # Downloaded satellite images
+├── 🛰️ Satellite Analysis
+│   ├── index.html              # Main satellite analysis interface
+│   ├── app.js                  # Frontend JavaScript logic
+│   ├── backend.py              # Flask API server (MAIN BACKEND)
+│   ├── api-copernicus.py       # Copernicus satellite data fetcher
+│   └── satellite_data/         # Downloaded satellite imagery
+│       └── sentinel2_*.jpg     # Sentinel-2 satellite images
+│
+├── 🎥 Wildlife Detection
+│   ├── wildlife-analysis.html  # Wildlife video analysis interface
+│   ├── wildlife-analysis.js    # Wildlife frontend logic
+│   ├── wildlife_backend.py     # Wildlife detection backend
+│   └── videos/                 # Wildlife camera trap footage
+│       └── *.mp4              # Video files for analysis
+│
+├── 🎨 Styling & Assets
+│   ├── styles.css              # Global styling and layout
+│   └── images/                 # Test images directory
+│       └── car.jpg            # Sample image for API testing
+│
+├── 📋 Documentation
+│   ├── README.md               # This file
+│   ├── ARCHITECTURE.md         # System architecture documentation
+│   ├── WILDLIFE_BACKEND_README.md   # Wildlife backend details
+│   └── WILDLIFE_DEBUG.md       # Wildlife troubleshooting guide
+│
+├── 🔧 Configuration & Setup
+│   ├── requirements.txt        # Python dependencies
+│   ├── check_setup.py          # Setup verification script
+│   ├── test_wildlife_setup.py  # Wildlife setup tester
+│   └── .env                    # API keys (create this!)
+│
+└── 🚀 Demos & Tests
+    └── together-main.py        # Together AI vision demo
 ```
 
 ## 🔄 How It Works
 
-### Architecture Flow:
+### System Architecture:
 
 ```
-┌─────────────┐      HTTP Requests      ┌──────────────┐
-│  Frontend   │ ───────────────────────> │   Backend    │
-│  (Browser)  │                          │   (Flask)    │
-│             │ <─────────────────────── │              │
-└─────────────┘      JSON Responses      └──────────────┘
-     │                                          │
-     │ 1. User selects region                  │
-     │ 2. User clicks "Fetch Data"             │ 3. Fetches satellite
-     │                                          │    image from storage
-     │ 4. User asks question                   │
-     │ 5. Sends prompt + context               │ 6. Encodes image to base64
-     │                                          │ 7. Calls Together AI API
-     │ 8. Receives AI analysis                 │
-     │                                          ▼
-     │                                   ┌──────────────┐
-     │                                   │  Together AI │
-     │                                   │  Vision API  │
-     │                                   └──────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                    USER'S BROWSER                                │
+│                                                                  │
+│  ┌─────────────────────┐      ┌─────────────────────┐         │
+│  │  🛰️ Satellite UI    │      │  🎥 Wildlife UI      │         │
+│  │  - Map Interface    │      │  - Video Player     │         │
+│  │  - Region Selection │      │  - Detection View   │         │
+│  │  - Chat Interface   │      │  - Chat Interface   │         │
+│  └──────────┬──────────┘      └──────────┬──────────┘         │
+│             │                             │                     │
+└─────────────┼─────────────────────────────┼─────────────────────┘
+              │                             │
+              │ HTTP/JSON                   │ HTTP/JSON
+              ▼                             ▼
+┌─────────────────────────┐   ┌──────────────────────────┐
+│   backend.py            │   │  wildlife_backend.py     │
+│   (Satellite Analysis)  │   │  (Wildlife Detection)    │
+│   Port: 5000            │   │  Port: 5001              │
+└──────────┬──────────────┘   └──────────┬───────────────┘
+           │                              │
+           │ Together AI API              │ Together AI API
+           │ (Llama-Vision-Free)          │ (Llama-90B-Vision)
+           │                              │
+           └──────────────┬───────────────┘
+                          ▼
+                  ┌────────────────┐
+                  │  Together AI   │
+                  │  Vision Models │
+                  └────────────────┘
 ```
 
-### Detailed Flow:
+### Satellite Analysis Flow:
 
-1. **Frontend (app.js)**:
-   - User draws a rectangle on the map to select a region
-   - Coordinates are stored in `appState.selectedRegion`
-   - User selects date range and data layers
-   - Clicks "Fetch Satellite Data" button
+1. **User selects region** on the interactive map using drawing tools
+2. **Configure date range** and data layers (NBR, NDVI, SWIR, FIRMS)
+3. **Fetch satellite data** - Backend retrieves Sentinel-2 imagery
+4. **Ask questions** about burn severity, vegetation health, impact
+5. **AI analyzes imagery** using vision model with geographic context
+6. **Receive detailed insights** streamed in real-time
 
-2. **Backend (/api/fetch-data)**:
-   - Receives region coordinates and date range
-   - Checks for available satellite images
-   - Returns list of available images
+### Wildlife Detection Flow:
 
-3. **Frontend Analysis**:
-   - User types a question in the prompt box
-   - Clicks "Analyze with VLM"
-   - Sends prompt along with region context
+1. **Upload video footage** or select from available camera trap videos
+2. **AI analyzes frames** to detect animals and identify species
+3. **Generate insights** about wildlife activity, behavior, patterns
+4. **Interactive chat** to ask specific questions about detected wildlife
+5. **Conservation insights** for ecological monitoring
 
-4. **Backend (/api/analyze)**:
-   - Receives the prompt and context
-   - Loads the satellite image from `satellite_data/`
-   - Encodes image to base64
-   - Builds enhanced prompt with geographic context
-   - Calls Together AI Vision API
-   - Streams response back to frontend
+## 🚀 Quick Start
 
-5. **AI Response**:
-   - Vision model analyzes the satellite imagery
-   - Provides detailed assessment of burn severity
-   - Frontend displays the response in chat interface
+### Prerequisites
+- Python 3.9 or higher
+- Together AI API key ([Get one here](https://api.together.xyz/))
+- Modern web browser (Chrome, Firefox, Edge)
 
-## 🚀 Setup Instructions
+### Setup Instructions
 
-### 1. Install Dependencies
+#### 1. Clone the Repository
+```bash
+cd C:\projects\lauzhack-2025
+```
 
+#### 2. Install Dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-### 2. Configure API Key
+Required packages:
+- `flask` - Web framework
+- `flask-cors` - Cross-origin support
+- `together` - Together AI API client
+- `python-dotenv` - Environment variable management
+- `requests` - HTTP library
+
+#### 3. Configure API Key
 
 Create a `.env` file in the project root:
 
@@ -112,69 +183,119 @@ Create a `.env` file in the project root:
 TOGETHER_API_KEY=your_together_ai_api_key_here
 ```
 
-Get your API key from: https://api.together.xyz/
+🔑 **Get your API key:** https://api.together.xyz/
 
-### 3. Add Satellite Images
+#### 4. Verify Setup
 
-Place satellite imagery (JPEG/PNG) in the `satellite_data/` directory:
+Run the automated setup checker:
 
 ```bash
+python check_setup.py
+```
+
+This will verify:
+- ✅ .env file exists
+- ✅ API key is configured
+- ✅ Required directories exist
+- ✅ Python packages are installed
+- ✅ Sample images are available
+
+#### 5. Add Satellite Images (Optional)
+
+Place satellite imagery in the `satellite_data/` directory:
+
+```
 satellite_data/
-├── sentinel2_20231007.jpg
-├── sentinel2_20231015.jpg
+├── sentinel2_20251016_nbr.jpg
+├── sentinel2_20251016_ndvi.jpg
 └── ...
 ```
 
-You can use `api-copernicus.py` to download real satellite data from Copernicus.
+You can use `api-copernicus.py` to download real Sentinel-2 data from Copernicus.
 
-### 4. Run the Backend Server
+#### 6. Add Wildlife Videos (Optional)
 
+Place camera trap videos in the `videos/` directory for wildlife analysis.
+
+### Running the Application
+
+#### Start Satellite Analysis Backend:
 ```bash
 python backend.py
 ```
+Server will start on `http://localhost:5000`
 
-The server will start on `http://localhost:5000`
-
-### 5. Open the Frontend
-
-Open your browser and navigate to:
+#### Start Wildlife Detection Backend:
+```bash
+python wildlife_backend.py
 ```
-http://localhost:5000
-```
+Server will start on `http://localhost:5001`
 
-## 🎯 Usage Guide
+#### Open in Browser:
+- **Satellite Analysis:** http://localhost:5000
+- **Wildlife Detection:** http://localhost:5000/wildlife-analysis.html
 
-### Basic Workflow:
+## 📖 User Guide
 
-1. **Select a Region**:
-   - Click the rectangle tool on the map
+### 🛰️ Satellite Analysis
+
+1. **Select a Region:**
+   - Click the rectangle tool (⬜) on the map
    - Draw a box around your area of interest
    - See coordinates displayed in the sidebar
 
-2. **Configure Settings**:
-   - Set start and end dates
-   - Choose data layers (NBR, NDVI, etc.)
+2. **Configure Settings:**
+   - Set start and end dates for temporal analysis
+   - Choose data layers:
+     - **NBR** (Normalized Burn Ratio) - Burn severity
+     - **NDVI** (Normalized Difference Vegetation Index) - Vegetation health
+     - **SWIR** (Short-Wave Infrared) - Fire detection
+     - **FIRMS** (Fire Information) - Active fires
 
-3. **Fetch Data**:
+3. **Fetch Data:**
    - Click "🚀 Fetch Satellite Data"
-   - Wait for confirmation message
+   - Wait for confirmation of available imagery
 
-4. **Ask Questions**:
+4. **Ask Questions:**
    - Type your question in the prompt box
-   - Examples:
+   - Example prompts:
      - "Analyze the burn severity in this region"
      - "What's the vegetation recovery rate?"
-     - "Estimate the total burned area"
+     - "Estimate the total burned area in hectares"
+     - "Compare the burn severity between different areas"
+     - "Has vegetation started to recover?"
    - Click "✨ Analyze with VLM"
 
-5. **Review Analysis**:
-   - Read the AI's detailed response
-   - Continue asking follow-up questions
+5. **Review Analysis:**
+   - Read the AI's detailed assessment
+   - Ask follow-up questions for deeper insights
+   - Conversation history is maintained for context
 
-## 📡 API Endpoints
+### 🎥 Wildlife Detection
 
-### GET `/api/health`
-Check server health and configuration
+1. **Navigate to Wildlife Tab:**
+   - Click "🎥 Wildlife Detection" in the navigation bar
+
+2. **Select Video:**
+   - Choose from available camera trap footage
+   - Or specify a video file path
+
+3. **Run Analysis:**
+   - Click "Analyze Wildlife"
+   - AI will process the video and detect animals
+
+4. **Review Results:**
+   - See detected species and counts
+   - View activity patterns
+   - Ask questions about animal behavior
+   - Get conservation insights
+
+## 📡 API Reference
+
+### Satellite Analysis Backend (Port 5000)
+
+#### `GET /api/health`
+Check server health and configuration status.
 
 **Response:**
 ```json
@@ -186,8 +307,8 @@ Check server health and configuration
 }
 ```
 
-### POST `/api/fetch-data`
-Fetch satellite data for a region
+#### `POST /api/fetch-data`
+Retrieve satellite data for a specific region and date range.
 
 **Request:**
 ```json
@@ -199,10 +320,10 @@ Fetch satellite data for a region
     "west": 13.0
   },
   "dateRange": {
-    "start": "2023-10-01",
-    "end": "2023-10-31"
+    "start": "2025-10-01",
+    "end": "2025-11-30"
   },
-  "layers": ["truecolor", "nbr", "ndvi"]
+  "layers": ["nbr", "ndvi", "swir"]
 }
 ```
 
@@ -211,21 +332,24 @@ Fetch satellite data for a region
 {
   "success": true,
   "message": "Found 3 satellite image(s)",
-  "images": ["sentinel2_20231007.jpg", "..."]
+  "images": ["sentinel2_20251016_nbr.jpg", "..."]
 }
 ```
 
-### POST `/api/analyze`
-Analyze satellite imagery with Vision AI
+#### `POST /api/analyze`
+Analyze satellite imagery using Vision AI with conversational context.
 
 **Request:**
 ```json
 {
-  "prompt": "What is the burn severity?",
-  "region": {...},
-  "dateRange": {...},
-  "layers": [...],
-  "conversationHistory": [...]
+  "prompt": "What is the burn severity in this region?",
+  "region": { "north": 46.0, "south": 45.5, "east": 13.5, "west": 13.0 },
+  "dateRange": { "start": "2025-10-01", "end": "2025-11-30" },
+  "layers": ["nbr", "ndvi"],
+  "conversationHistory": [
+    { "role": "user", "content": "Previous question..." },
+    { "role": "assistant", "content": "Previous answer..." }
+  ]
 }
 ```
 
@@ -233,117 +357,361 @@ Analyze satellite imagery with Vision AI
 ```json
 {
   "success": true,
-  "response": "Based on the satellite imagery...",
-  "image_analyzed": "sentinel2_20231007.jpg"
+  "response": "Based on the NBR analysis of the satellite imagery...",
+  "image_analyzed": "sentinel2_20251016_nbr.jpg"
 }
 ```
 
-### GET `/api/test-car-image`
-Test endpoint to verify vision API with car.jpg
+#### `GET /api/test-car-image`
+Test endpoint to verify Together AI vision API with sample image.
 
 **Response:**
 ```json
 {
   "success": true,
-  "response": "The car appears to be a..."
+  "response": "The image shows a [detailed description]..."
 }
 ```
 
-## 🧪 Testing the Vision API
+### Wildlife Detection Backend (Port 5001)
 
-To test the Together AI vision capability with the sample car image:
+#### `GET /api/health`
+Check wildlife backend status.
 
-### Option 1: Use the test endpoint
+#### `POST /api/analyze-video`
+Analyze wildlife camera trap footage.
+
+**Request:**
+```json
+{
+  "video_path": "videos/Beaver camera trap footage.mp4",
+  "prompt": "What animals are in this video?"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "response": "Detected: 2 beavers, active during evening hours...",
+  "species_detected": ["beaver"],
+  "count": 2
+}
+```
+
+## 🧪 Testing & Validation
+
+### Test the Vision API
+
+#### Option 1: Automated Setup Check
+```bash
+python check_setup.py
+```
+Validates your entire setup including API keys, directories, and dependencies.
+
+#### Option 2: Test Car Image Recognition
 ```bash
 curl http://localhost:5000/api/test-car-image
 ```
+Tests the Together AI vision API with a sample car image.
 
-### Option 2: Run the standalone script
+#### Option 3: Standalone Vision Demo
 ```bash
 python together-main.py
 ```
+Runs a standalone demo that analyzes `images/car.jpg` and describes the vehicle.
 
-This will analyze `images/car.jpg` and tell you the car brand.
+#### Option 4: Wildlife Setup Check
+```bash
+python test_wildlife_setup.py
+```
+Validates wildlife detection backend configuration.
 
-## 🔧 Code Structure Explained
+### Example Questions to Try
 
-### `backend.py` - Main Server
+**Satellite Analysis:**
+- "What is the burn severity classification in this region?"
+- "Estimate the total area affected by fire"
+- "Has vegetation started recovering since the fire?"
+- "Compare the NDVI values before and after the burn"
+- "What's the ecological impact of this wildfire?"
 
-**Key Functions:**
+**Wildlife Detection:**
+- "What animals are visible in this video?"
+- "How many different species can you detect?"
+- "What time of day were the animals most active?"
+- "Describe the behavior of the detected animals"
+- "Any signs of habitat degradation?"
 
-- `encode_image_to_base64(image_path)`: Converts images to base64 for API transmission
-- `analyze_image_with_vlm(image_path, prompt, conversation_history)`: Calls Together AI Vision API
-- `/api/fetch-data`: Handles satellite data retrieval requests
-- `/api/analyze`: Processes AI analysis requests
+## 💻 Code Architecture
 
-### `app.js` - Frontend Logic
+### `backend.py` - Satellite Analysis Server
 
 **Key Components:**
 
-- `appState`: Global state management for selected region, dates, layers
-- `initMap()`: Initializes Leaflet map with drawing controls
-- `handlePromptSubmission()`: Sends prompts to backend for analysis
-- `addUserMessage()`, `addAIMessage()`: Manages chat UI
+```python
+# Core Functions
+encode_image_to_base64(image_path)
+# Converts satellite images to base64 for API transmission
 
-### `together-main.py` - Vision API Demo
+analyze_image_with_vlm(image_path, prompt, conversation_history)
+# Calls Together AI Vision API with SATUK system prompt
 
-Standalone script demonstrating Together AI vision capabilities:
-- Loads an image (car.jpg)
-- Encodes to base64
-- Sends to vision model
-- Streams response
+# API Endpoints
+@app.route('/api/fetch-data', methods=['POST'])
+# Handles satellite data retrieval requests
 
-## 🌟 Features
+@app.route('/api/analyze', methods=['POST'])
+# Processes AI analysis requests with geographic context
+```
 
-✅ **Interactive Map Interface**: Draw regions directly on the map
-✅ **Date Range Selection**: Choose time periods for analysis
-✅ **Multiple Data Layers**: Support for NBR, NDVI, SWIR, FIRMS
-✅ **AI-Powered Analysis**: Vision-Language Model analyzes imagery
-✅ **Conversation History**: Follow-up questions with context
-✅ **Real-time Streaming**: AI responses stream in real-time
-✅ **Clean UI**: Modern, responsive design
+**System Prompt:**
+```
+You are SATUK VLM (Satellite AI for Terrain Understanding & Knowledge),
+an expert AI assistant for analyzing satellite imagery to assess wildfire
+burn severity and environmental impact.
+```
 
-## 🔮 Future Enhancements
+### `wildlife_backend.py` - Wildlife Detection Server
 
-- [ ] Direct Copernicus API integration for live data fetching
-- [ ] Multiple image comparison (before/after)
-- [ ] Export analysis reports as PDF
-- [ ] Integration with additional satellite data sources
-- [ ] Custom layer visualization on the map
-- [ ] User authentication and saved analyses
-- [ ] Batch processing for multiple regions
+**Key Components:**
+
+```python
+# Video Analysis
+analyze_video_with_vlm(video_path, prompt)
+# Processes wildlife video footage frame-by-frame
+
+extract_video_frames(video_path, num_frames=10)
+# Extracts representative frames for analysis
+
+# API Endpoints
+@app.route('/api/analyze-video', methods=['POST'])
+# Handles wildlife video analysis requests
+```
+
+### `app.js` - Satellite Frontend Logic
+
+**Key State Management:**
+
+```javascript
+const appState = {
+    selectedRegion: null,      // Map coordinates
+    dateRange: { start, end }, // Temporal range
+    selectedLayers: [],        // Data layers
+    conversationHistory: []    // Chat context
+}
+
+// Core Functions
+initMap()                     // Leaflet map initialization
+handlePromptSubmission()      // Send prompts to backend
+updateChatInterface()         // Display AI responses
+```
+
+### `wildlife-analysis.js` - Wildlife Frontend Logic
+
+**Key Components:**
+
+```javascript
+// Video handling
+initVideoPlayer()             // Video.js initialization
+analyzeCurrentFrame()         // Frame-by-frame analysis
+displayDetectionResults()     // Show detected species
+```
+
+## 🌟 Current Features
+
+### Satellite Analysis Module
+✅ **Interactive Map Interface** - Leaflet-based region selection with drawing tools  
+✅ **Multi-temporal Analysis** - Compare imagery across different dates  
+✅ **Multiple Data Layers** - NBR, NDVI, SWIR, FIRMS support  
+✅ **AI-Powered Assessment** - Automated burn severity analysis  
+✅ **Geographic Context** - Coordinates and region info in analysis  
+✅ **Conversation Memory** - Follow-up questions with context retention  
+
+### Wildlife Detection Module
+✅ **Video Analysis** - Process camera trap footage automatically  
+✅ **Species Identification** - Detect and classify wildlife  
+✅ **Activity Patterns** - Temporal behavior analysis  
+✅ **Conservation Insights** - Ecological monitoring capabilities  
+
+### Shared Features
+✅ **Real-time Streaming** - AI responses stream as they're generated  
+✅ **Modern UI** - Clean, responsive interface design  
+✅ **Dual Backend** - Separate specialized servers for each module  
+✅ **Error Handling** - Comprehensive error messages and recovery  
+✅ **Setup Validation** - Automated configuration checking  
+
+## 🚀 Future Enhancements
+
+### Satellite Analysis Roadmap
+- [ ] **Live Copernicus Integration** - Direct API fetching of satellite data
+- [ ] **Multi-image Comparison** - Side-by-side before/after visualization
+- [ ] **Custom Visualizations** - Render data layers directly on map
+- [ ] **PDF Report Export** - Generate professional analysis reports
+- [ ] **Time-series Analysis** - Track changes over extended periods
+- [ ] **Batch Processing** - Analyze multiple regions simultaneously
+- [ ] **Area Calculations** - Precise burn area measurements
+- [ ] **Severity Heatmaps** - Visual severity classification overlays
+
+### Wildlife Detection Roadmap
+- [ ] **Real-time Detection** - Live camera feed analysis
+- [ ] **Species Database** - Comprehensive wildlife reference library
+- [ ] **Population Tracking** - Long-term monitoring and trends
+- [ ] **Alert System** - Notifications for rare species detection
+- [ ] **Habitat Analysis** - Environmental quality assessment
+- [ ] **Multi-camera Support** - Network of camera traps
+- [ ] **Behavior Classification** - Automated ethogram generation
+- [ ] **Conservation Reports** - Automated biodiversity assessments
+
+### Platform Enhancements
+- [ ] **User Authentication** - Personal accounts and saved analyses
+- [ ] **Data Persistence** - Database for historical analyses
+- [ ] **API Rate Limiting** - Prevent abuse and manage costs
+- [ ] **Mobile Support** - Responsive design for tablets/phones
+- [ ] **Collaboration Tools** - Share analyses with team members
+- [ ] **Integration APIs** - Connect with other environmental tools
+- [ ] **Multi-language Support** - Internationalization
+- [ ] **Dark Mode** - Alternative UI theme
 
 ## 🐛 Troubleshooting
 
-**Issue: API key not found**
+### Common Issues & Solutions
+
+**❌ API key not found**
 ```
+Error: TOGETHER_API_KEY not configured
 Solution: Create .env file with TOGETHER_API_KEY=your_key
 ```
 
-**Issue: No satellite images available**
+**❌ No satellite images available**
 ```
-Solution: Add JPEG/PNG images to satellite_data/ directory
-```
-
-**Issue: CORS errors in browser**
-```
-Solution: Ensure flask-cors is installed and backend is running
+Error: No images found in satellite_data/
+Solution: Add JPEG/PNG satellite images to satellite_data/ directory
+         or use api-copernicus.py to download Sentinel-2 data
 ```
 
-**Issue: Image analysis fails**
+**❌ CORS errors in browser**
 ```
-Solution: Check that image file exists and is a valid JPEG/PNG
+Error: Access-Control-Allow-Origin header missing
+Solution: Ensure flask-cors is installed: pip install flask-cors
+         Verify backend.py is running on http://localhost:5000
 ```
+
+**❌ Image analysis fails**
+```
+Error: Failed to analyze image
+Solution: 
+  1. Check that image file exists and is valid JPEG/PNG
+  2. Verify image is not corrupted
+  3. Check Together AI API key is valid
+  4. Review backend.py logs for detailed error messages
+```
+
+**❌ Wildlife backend won't start**
+```
+Error: Port 5001 already in use
+Solution: Kill process using port 5001 or change port in wildlife_backend.py
+```
+
+**❌ Video file not found**
+```
+Error: Video file does not exist
+Solution: Place video files in videos/ directory
+         Ensure file path is correct (case-sensitive on Linux)
+```
+
+**❌ Module import errors**
+```
+Error: ModuleNotFoundError: No module named 'flask'
+Solution: Install all dependencies: pip install -r requirements.txt
+```
+
+### Getting Help
+
+1. **Check setup:** Run `python check_setup.py`
+2. **View logs:** Check terminal output from backend servers
+3. **Verify API:** Test with `curl http://localhost:5000/api/health`
+4. **Read docs:** See `ARCHITECTURE.md` and `WILDLIFE_BACKEND_README.md`
+
+## 📚 Additional Documentation
+
+- **`ARCHITECTURE.md`** - Detailed system architecture and diagrams
+- **`WILDLIFE_BACKEND_README.md`** - Wildlife detection backend specifics
+- **`WILDLIFE_DEBUG.md`** - Wildlife module troubleshooting guide
+- **`report_prompt.txt`** - Template for wildfire analysis reports
+- **`similar_wildfire_prompt.txt`** - Finding similar historical fires
+- **`time_comparison_prompt.txt`** - Temporal comparison templates
+
+## 🎓 Use Cases
+
+### Environmental Monitoring
+- Post-wildfire burn severity assessment
+- Vegetation recovery tracking
+- Ecological impact evaluation
+- Wildlife habitat monitoring
+
+### Conservation
+- Biodiversity monitoring through camera traps
+- Species population tracking
+- Habitat quality assessment
+- Protected area management
+
+### Research
+- Climate change impact studies
+- Ecosystem resilience analysis
+- Wildlife behavior research
+- Long-term environmental trends
+
+### Emergency Response
+- Rapid wildfire damage assessment
+- Resource allocation planning
+- Recovery monitoring
+- Impact documentation
+
+## 🏆 LauzHack 2025
+
+This project was created for **LauzHack 2025**, showcasing the power of Vision-Language Models for environmental monitoring and conservation.
+
+**Team Focus:**
+- Combining satellite imagery analysis with AI
+- Wildlife detection and monitoring
+- Real-world environmental applications
+- User-friendly interfaces for non-technical users
 
 ## 📝 License
 
-See LICENSE file for details.
+See `LICENSE` file for details.
 
 ## 🤝 Contributing
 
-This project was created for LauzHack 2025. Feel free to fork and improve!
+We welcome contributions! Areas for improvement:
+- Additional satellite data sources
+- More wildlife species detection
+- Enhanced visualization tools
+- Performance optimizations
+- Documentation improvements
+
+To contribute:
+1. Fork the repository
+2. Create a feature branch
+3. Make your improvements
+4. Submit a pull request
+
+## 🙏 Acknowledgments
+
+- **Together AI** - For providing excellent vision model APIs
+- **Copernicus/ESA** - For Sentinel-2 satellite data
+- **LauzHack 2025** - For the hackathon opportunity
+- **Leaflet.js** - For the mapping framework
+- **Open source community** - For amazing tools and libraries
+
+## 📧 Contact
+
+For questions or feedback about SATUK VLM, please open an issue in the repository.
 
 ---
 
-**Built with ❤️ for wildfire assessment and environmental monitoring**
+**Built with ❤️ for environmental conservation and wildfire assessment**
+
+🔥 **SATUK VLM** - *Satellite AI for Terrain Understanding & Knowledge*
 
